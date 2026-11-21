@@ -127,6 +127,7 @@ def cmd_cleanup(args) -> int:
 def main(argv: list[str] | None = None) -> int:
     sys.stdout.reconfigure(encoding="utf-8")
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)-7s %(message)s")
+    logging.getLogger("httpx").setLevel(logging.WARNING)
     parser = argparse.ArgumentParser(prog="python -m scraper")
     sub = parser.add_subparsers(dest="command", required=True)
 
