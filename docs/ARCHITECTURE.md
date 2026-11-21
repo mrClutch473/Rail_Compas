@@ -110,9 +110,9 @@ class SourceAdapter(ABC):
 
 Не первая стратегия → предупреждение `fallback_strategy`. Конец выдачи: явный маркер протокола > тишина 3 с после данных > признак на странице > тайм-аут.
 
-### Браузер
+### Сеть
 
-Один Chromium на воркер, постоянный контекст на площадку (`data/profiles/<source>/`, cookie и пройденная JS-проверка сохраняются). `ru-RU`, `Europe/Moscow`, 1366×768. Блокируем картинки, шрифты, медиа, счётчики. Прокси — на уровне контекста (`Source.use_proxy`, адреса в `SCRAPER_PROXIES`), один прокси закреплён за контекстом, смена при блокировке. Перезапуск контекста каждые 50 загрузок и после сбоя. Без стелс-плагинов.
+`scraper/transport.py`: `httpx.AsyncClient` на задачу, обычный UA и заголовки площадки (`adapter.headers`), тайм-аут запроса 20 с, задачи 45 с. `FetchContext.get_json/post_json` записывает каждый ответ в `payloads` (уходит в сырой файл). 403/429 или HTML с признаками капчи → `BlockedError`; не JSON → `LayoutChanged`; 5xx → `NetworkError`. Прокси: `Source.use_proxy` → случайный из `SCRAPER_PROXIES`. Браузер (Playwright) не используется — запасной путь в `FUTURE` (4.6).
 
 ### Ошибки
 
@@ -120,7 +120,6 @@ class SourceAdapter(ABC):
 |---|---|---|
 | `NetworkError` | 3 раза, 5 → 15 → 45 с | `network` |
 | `FetchTimeout` | 1 раз | `timeout` |
-| `ChallengePending` (JS-проверка) | ждать до 20 с, перезагрузить, до 2 раз | `blocked`, если не прошла |
 | `BlockedError` (капча, 429, явная блокировка) | нет; другой прокси, иначе охлаждение площадки 1 ч | `blocked` |
 | `LayoutChanged` (данных нет ни одной стратегией) | нет | `layout_changed` |
 | `ParseError` (данные не по схеме) | нет | `invalid` |
@@ -134,11 +133,11 @@ class SourceAdapter(ABC):
 
 ### Отладка
 
-Сырые ответы `data/raw/<source>/<date>/<route>_<travel>_<time>.json.gz`, 14 дней. CLI: `scrape one --source --from --to --date [--headed] [--proxy]`, `scrape probe <url>`, `scrape replay <raw>`, `scrape fixture <raw> <name>` (чистит cookie и токены). Django: `manage.py sync <from> <to> <date>`.
+Сырые ответы `data/raw/<source>/<date>/<route>_<travel>_<time>.json.gz`, 14 дней. CLI без Django и БД (ID городов из `seed/reference.yaml`): `python -m scraper one --source S --from volgograd --to moskva --date YYYY-MM-DD [--proxy] [--json]`, `replay <raw>`, `fixture <raw> <name>` → `tests/scraper/fixtures/<source>/`, `status`, `cleanup`. Разведка: `python -m scraper.recon.probe|search|shape|resolve_cities`. Django: `manage.py sync <from> <to> <date>` (фаза 6).
 
 ### Если площадка сломалась
 
-`blocked` → увеличить паузу, уменьшить бюджет, включить прокси; постоянная капча → выключить площадку. `layout_changed`/`invalid` → `scrape one --headed` → `scrape probe` → сравнить с фикстурой → новая фикстура + падающий тест → правка `parse` → `replay` на свежих сырых.
+`blocked` → увеличить паузу, уменьшить бюджет, включить прокси; постоянная капча → выключить площадку. `layout_changed`/`invalid` → `python -m scraper one` → `scraper.recon.probe` по странице площадки → сравнить с фикстурой → новая фикстура + падающий тест → правка `parse` → `replay` на свежих сырых.
 
 ## Нормализация
 
