@@ -89,6 +89,12 @@ STORAGES = {
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
 }
 
+SYNC_COOLDOWN_SECONDS = env.int("SYNC_COOLDOWN_SECONDS", default=300)
+SYNC_JOB_TIMEOUT_SECONDS = env.int("SYNC_JOB_TIMEOUT_SECONDS", default=180)
+SYNC_STALE_MINUTES = env.int("SYNC_STALE_MINUTES", default=10)
+WORKER_SLOTS = env.int("WORKER_SLOTS", default=3)
+STALE_AFTER_HOURS = env.int("STALE_AFTER_HOURS", default=24)
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 FORMS_URLFIELD_ASSUME_HTTPS = True
 
