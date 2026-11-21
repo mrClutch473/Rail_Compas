@@ -1,0 +1,107 @@
+@import "tailwindcss";
+
+@source "../../templates";
+@source "../../apps";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  --bg: #f6f7fb;
+  --surface: #ffffff;
+  --surface-muted: #eef1f6;
+  --text: #121722;
+  --muted: #5a6273;
+  --border: #e2e6ee;
+  --brand: #1f5bd8;
+  --brand-strong: #1646ad;
+  --brand-soft: #e6eefc;
+  --best: #0e9f6e;
+  --best-soft: #e3f6ee;
+  --warn: #b7791f;
+  --danger: #d64545;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1116;
+    --surface: #161a22;
+    --surface-muted: #1d222c;
+    --text: #e7eaf0;
+    --muted: #99a1b1;
+    --border: #272c37;
+    --brand: #6b95ff;
+    --brand-strong: #8eaeff;
+    --brand-soft: #1b2643;
+    --best: #34d399;
+    --best-soft: #12302a;
+    --warn: #f6c453;
+    --danger: #f87171;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0e1116;
+  --surface: #161a22;
+  --surface-muted: #1d222c;
+  --text: #e7eaf0;
+  --muted: #99a1b1;
+  --border: #272c37;
+  --brand: #6b95ff;
+  --brand-strong: #8eaeff;
+  --brand-soft: #1b2643;
+  --best: #34d399;
+  --best-soft: #12302a;
+  --warn: #f6c453;
+  --danger: #f87171;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-soft: var(--brand-soft);
+  --color-best: var(--best);
+  --color-best-soft: var(--best-soft);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-bg text-text antialiased;
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@utility card {
+  @apply rounded-2xl border border-border bg-surface;
+}
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition;
+}
+
+@utility btn-primary {
+  @apply btn bg-brand text-white hover:bg-brand-strong;
+}
+
+@utility btn-ghost {
+  @apply btn text-text hover:bg-surface-muted;
+}
+
+@utility badge {
+  @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+}

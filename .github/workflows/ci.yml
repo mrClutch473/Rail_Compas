@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: railcompas
+          POSTGRES_USER: railcompas
+          POSTGRES_PASSWORD: railcompas
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U railcompas"
+          --health-interval 3s --health-timeout 3s --health-retries 20
+    env:
+      DATABASE_URL: postgres://railcompas:railcompas@localhost:5432/railcompas
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --frozen --no-group recon
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pytest --cov --cov-report=term-missing

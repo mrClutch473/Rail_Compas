@@ -17,7 +17,7 @@
 | `db` | PostgreSQL 16: данные и очередь |
 | `nginx` (prod) | HTTPS, статика |
 
-Образ один на `web` и `worker` (база — официальный образ Playwright для Python). Сервер: 2 vCPU, 4 ГБ RAM.
+Образ один на `web` и `worker`: сборка CSS (Tailwind CLI) + `python:3.13-slim`, без браузера (D-28). Сервер: HOSTKEY, Подольск, 2 vCPU / 2 ГБ + 2 ГБ swap, `/opt/railcompas`. Локально БД на порту 5433.
 
 ## Код
 
@@ -30,7 +30,8 @@ apps/sync/           SyncJob, SyncTask, request_sync, worker, scheduler, ingest 
 apps/web/            страницы, htmx-фрагменты, ClickOut, templatetags
 apps/analytics/      расчёты разницы цен
 scraper/             БЕЗ Django: adapters/, browser.py, capture.py, throttle.py, errors.py, normalize/, validate.py, schemas.py, cli.py
-templates/, static/  Tailwind src → dist, vendor/ (htmx, Chart.js)
+assets/css/          исходник Tailwind (app.css, токены тем)
+templates/, static/  dist/ (собранный CSS), vendor/ (htmx, Chart.js), img/
 seed/                YAML справочников
 tests/               scraper/ (fixtures/<source>/), apps/, e2e/
 recon/, data/        дампы разведки и сырые ответы (не в git)
@@ -92,8 +93,9 @@ recon/, data/        дампы разведки и сырые ответы (н�
 ```python
 class SourceAdapter(ABC):
     code: ClassVar[str]
-    async def fetch(self, page: Page, req: ScrapeRequest) -> RawCapture: ...   # единственная сеть
-    def parse(self, raw: RawCapture, req: ScrapeRequest) -> ParseResult: ...    # чистая функция
+    async def fetch(self, ctx: FetchContext, req: ScrapeRequest) -> RawCapture: ...  # единственная сеть
+    # ctx.http — httpx-клиент площадки (прокси, сессия); await ctx.page() — браузер, только если нужен
+    def parse(self, raw: RawCapture, req: ScrapeRequest) -> ParseResult: ...  # чистая функция
     def offer_url(self, req: ScrapeRequest) -> str: ...
 ```
 
@@ -101,7 +103,8 @@ class SourceAdapter(ABC):
 
 ### Стратегии получения (по убыванию надёжности)
 
-1. Сеть: `page.on("websocket")` → `framereceived`, `page.on("response")` для JSON.
+0. Прямой HTTP-запрос к внутреннему API площадки без браузера, если он работает (Туту — да). Быстро, мало памяти; браузер поднимается лениво только для запасного пути.
+1. Сеть в браузере: `page.on("websocket")` → `framereceived`, `page.on("response")` для JSON.
 2. Состояние страницы: `__NEXT_DATA__`, `__NUXT__`.
 3. DOM: `data-*`, семантика, в последнюю очередь классы.
 
@@ -139,12 +142,12 @@ class SourceAdapter(ABC):
 
 ## Нормализация
 
-- **Номер поезда:** убрать `№`, пробелы, `*`; латинские двойники → кириллица (`A→А, B→В, E→Е, K→К, M→М, H→Н, O→О, P→Р, C→С, T→Т, X→Х, Y→У`), транслит (`ZH→Ж` и т.п.); верхний регистр; цифры дополнить до 3. Двойной номер `015А/016А` — берём номер отправления из нашего города, полный текст в `extras.raw_number` [не проверено].
+- **Номер поезда:** убрать `№`, пробелы, `*`; латинские двойники → кириллица (`A→А, B→В, E→Е, K→К, M→М, H→Н, O→О, P→Р, C→С, T→Т, X→Х, Y→У`), транслит (`ZH→Ж` и т.п.); верхний регистр; цифры дополнить до 3. Звёздочку (`357*С`) отбрасываем. Двойная нумерация подтверждена: одна площадка пишет `357С`, другая `358С` для одного поезда — см. склейку.
 - **Класс вагона:** `seated` (сидячий, эконом, базовый), `platzkart`, `coupe`, `sv` (СВ, спальный), `lux` (люкс, мягкий, гранд). Код обслуживания (`2К`, `1Б`…) приоритетнее названия, если площадка его отдаёт. Словарь пополняется по `unknown_car_class`.
 - **Цена:** `Decimal`, рубли, один взрослый. Скидка, уже применённая на витрине, учитывается; зачёркнутая → `price_old`. Кешбэк и баллы не вычитаем, в `extras`. Сбор включён или нет — свойство площадки `Source.fee_policy`.
 - **Время:** площадки показывают местное время станции [проверить в разведке]. Привязка к поясу: отправление — пояс города отправления, прибытие — города прибытия. Хранение UTC. `Trip.departure_date` — по местному времени отправления. Время в пути считаем сами.
 - **Вокзал:** нижний регистр, без «вокзал», скобок, `ё→е`; поиск по `name` и `aliases` в городе; не найден → `Station(is_verified=False)`.
-- **Склейка рейсов:** ключ `route + train_number + departure_date`. Время отправления от разных площадок расходится > 5 мин → `time_mismatch`, приоритет у площадки с меньшим `Source.priority`.
+- **Склейка рейсов:** ключ `route + train_number + departure_date`; если не нашли — запасной: тот же маршрут, то же время отправления до минуты, номера отличаются на 1 (D-26). `Trip.alt_numbers` хранит все встреченные номера. Время отправления от разных площадок расходится > 5 мин → `time_mismatch`, приоритет у площадки с меньшим `Source.priority`.
 
 ## Модели
 

@@ -1,0 +1,37 @@
+{% load static %}<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}ЖД Компас — сравнение цен на ж/д билеты{% endblock %}</title>
+  <meta name="description" content="{% block description %}Цены на один и тот же поезд на разных площадках продажи билетов — рядом и с историей.{% endblock %}">
+  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+  <link rel="stylesheet" href="{% static 'dist/app.css' %}">
+  <script src="{% static 'vendor/htmx.min.js' %}" defer></script>
+  {% block head %}{% endblock %}
+</head>
+<body class="min-h-screen flex flex-col" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+  <header class="border-b border-border bg-surface">
+    <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+      <a href="{% url 'web:home' %}" class="flex items-center gap-2 font-bold text-lg">
+        <img src="{% static 'img/favicon.svg' %}" alt="" class="h-7 w-7">
+        <span>ЖД&nbsp;Компас</span>
+      </a>
+      <nav class="flex items-center gap-1 text-sm">
+        <a href="{% url 'web:home' %}" class="btn-ghost">Поиск</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="flex-1">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="border-t border-border bg-surface">
+    <div class="mx-auto max-w-6xl px-4 py-6 text-sm text-muted">
+      ЖД Компас сравнивает цены площадок и не продаёт билеты. Покупка — на сайте площадки.
+    </div>
+  </footer>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

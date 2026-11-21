@@ -1,0 +1,55 @@
+[project]
+name = "rail-compas"
+version = "0.1.0"
+description = "ЖД Компас — rail ticket price comparison"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "django>=5.2,<6.0",
+    "django-environ>=0.12",
+    "psycopg[binary]>=3.2",
+    "gunicorn>=23.0",
+    "whitenoise>=6.9",
+    "httpx>=0.28",
+    "pydantic>=2.11",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-django>=4.11",
+    "pytest-cov>=6.0",
+    "factory-boy>=3.3",
+    "time-machine>=2.16",
+    "ruff>=0.12",
+    "pre-commit>=4.2",
+]
+recon = [
+    "playwright>=1.65,<2",
+    "python-dotenv>=1.0",
+]
+
+[tool.uv]
+package = false
+default-groups = ["dev", "recon"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+extend-exclude = ["**/migrations/*", "docs", "*.md"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "DJ", "SIM", "RUF"]
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["apps", "config", "scraper"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+python_files = ["test_*.py"]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+
+[tool.coverage.run]
+source = ["apps", "scraper"]
+omit = ["*/migrations/*", "scraper/recon/*"]
