@@ -66,6 +66,8 @@ TEMPLATES = [
 
 DATABASES = {"default": env.db("DATABASE_URL")}
 DATABASES["default"]["CONN_MAX_AGE"] = 60
+if DATABASES["default"]["ENGINE"].endswith("postgresql"):
+    DATABASES["default"].setdefault("OPTIONS", {})["connect_timeout"] = 5
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -88,6 +90,7 @@ STORAGES = {
 }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+FORMS_URLFIELD_ASSUME_HTTPS = True
 
 LOGGING = {
     "version": 1,

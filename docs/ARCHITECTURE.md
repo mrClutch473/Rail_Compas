@@ -154,11 +154,11 @@ class SourceAdapter(ABC):
 | Модель | Ключевые поля | Ограничения / индексы |
 |---|---|---|
 | `City` | name, slug, timezone (IANA), is_active | slug unique |
-| `Station` | city, name, aliases (JSON list), express_code, is_verified | (city, name) unique |
-| `Source` | code, name, base_url, is_active, priority, color, fee_policy (included/excluded/unknown), price_note, min_interval_sec, daily_budget, use_proxy | code unique |
+| `Station` | city, name, aliases (JSON list), express_code, is_verified | (city, name) unique; express_code unique, если не пустой |
+| `Source` | code, name, base_url, is_active, is_reference, priority, color, fee_policy (included/excluded/unknown), price_note, min_interval_sec, daily_budget, use_proxy | code unique. `rzd_base` (`is_reference`) — тариф РЖД из `gdsCost` OneTwoTrip, хранится снимками как обычная площадка |
 | `SourceCity` | source, city, external_id, url_slug | (source, city) unique |
 | `Route` | origin, destination, slug, is_scheduled, horizon_days=30, search_count, last_searched_at | (origin, destination) unique, origin ≠ destination |
-| `Trip` | route, train_number, train_name, departure_date, departure_at, arrival_at, duration_min, origin_station, destination_station | (route, train_number, departure_date) unique; arrival > departure; idx (route, departure_date) |
+| `Trip` | route, train_number, alt_numbers (JSON), train_name, departure_date, departure_at, arrival_at, duration_min, origin_station, destination_station | (route, train_number, departure_date) unique; arrival > departure; idx (route, departure_date) |
 | `PriceSnapshot` | trip, source, task, car_class, price, price_old, seats, url, extras, collected_at | price > 0; idx (trip, source, car_class, collected_at), idx (task) |
 | `SyncJob` | route, travel_date, trigger (user/admin/schedule), priority, status (queued/running/done/partial/failed), created/started/finished_at, error | partial unique (route, travel_date) where status in (queued, running); idx (status, priority, created_at) |
 | `SyncTask` | job, source, route, travel_date, status (pending/running/ok/empty/blocked/timeout/network/layout_changed/invalid/error/skipped), offers_count, attempts, duration_ms, strategy, proxy_used, error, warnings (JSON), raw_ref, finished_at | (job, source) unique; idx (source, route, travel_date, -finished_at) where status in (ok, empty) |

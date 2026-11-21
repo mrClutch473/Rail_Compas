@@ -11,6 +11,7 @@ dependencies = [
     "whitenoise>=6.9",
     "httpx>=0.28",
     "pydantic>=2.11",
+    "pyyaml>=6.0",
 ]
 
 [dependency-groups]
@@ -39,7 +40,7 @@ extend-exclude = ["**/migrations/*", "docs", "*.md"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "DJ", "SIM", "RUF"]
-ignore = ["RUF001", "RUF002", "RUF003"]
+ignore = ["RUF001", "RUF002", "RUF003", "RUF012"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["apps", "config", "scraper"]
@@ -49,6 +50,9 @@ DJANGO_SETTINGS_MODULE = "config.settings.test"
 python_files = ["test_*.py"]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"
+filterwarnings = [
+    "ignore:The FORMS_URLFIELD_ASSUME_HTTPS transitional setting is deprecated",
+]
 
 [tool.coverage.run]
 source = ["apps", "scraper"]

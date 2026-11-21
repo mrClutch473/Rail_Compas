@@ -1,0 +1,124 @@
+# Reference data for stage 1. Loaded by `manage.py seed_reference` (idempotent).
+# City IDs were resolved from the sellers' own suggest APIs on 21.11.2026
+# (scraper/recon/resolve_cities.py); Voronezh dropped — no direct trains.
+
+sources:
+  - {code: tutu, name: Туту, base_url: "https://www.tutu.ru", priority: 10, color: "#7c4dff", fee_policy: unknown, min_interval_sec: 3, daily_budget: 3000}
+  - {code: onetwotrip, name: OneTwoTrip, base_url: "https://www.onetwotrip.com", priority: 20, color: "#0094ff", fee_policy: included, price_note: "Цена с комиссией OneTwoTrip", min_interval_sec: 3, daily_budget: 3000}
+  - {code: aviakassa, name: Aviakassa, base_url: "https://www.aviakassa.com", priority: 30, color: "#ff7a00", fee_policy: unknown, min_interval_sec: 3, daily_budget: 3000}
+  - {code: rzd_base, name: "Тариф РЖД", base_url: "https://ticket.rzd.ru", priority: 90, color: "#64748b", is_reference: true, fee_policy: excluded, price_note: "Базовая цена перевозчика без наценки площадок", min_interval_sec: 0, daily_budget: 0}
+
+cities:
+  - name: Волгоград
+    slug: volgograd
+    timezone: Europe/Volgograd
+    sources:
+      tutu: {external_id: "2020500", url_slug: Volgograd}
+      onetwotrip: {external_id: "23509", url_slug: volgograd}
+      aviakassa: {external_id: "2020500"}
+  - name: Москва
+    slug: moskva
+    timezone: Europe/Moscow
+    sources:
+      tutu: {external_id: "2000000", url_slug: Moskva}
+      onetwotrip: {external_id: "22823", url_slug: moskva}
+      aviakassa: {external_id: "2000000"}
+  - name: Санкт-Петербург
+    slug: sankt-peterburg
+    timezone: Europe/Moscow
+    sources:
+      tutu: {external_id: "2004000", url_slug: Sankt-Peterburg}
+      onetwotrip: {external_id: "22871", url_slug: sankt-peterburg}
+      aviakassa: {external_id: "2004000"}
+  - name: Саратов
+    slug: saratov
+    timezone: Europe/Saratov
+    sources:
+      tutu: {external_id: "2020000", url_slug: Saratov}
+      onetwotrip: {external_id: "25822", url_slug: saratov}
+      aviakassa: {external_id: "2020000"}
+  - name: Ростов-на-Дону
+    slug: rostov-na-donu
+    timezone: Europe/Moscow
+    sources:
+      tutu: {external_id: "2064000", url_slug: Rostov-Na-Donu}
+      onetwotrip: {external_id: "22858", url_slug: rostov}
+      aviakassa: {external_id: "2064000"}
+  - name: Астрахань
+    slug: astrahan
+    timezone: Europe/Astrakhan
+    sources:
+      tutu: {external_id: "2020600", url_slug: Astrakhan}
+      onetwotrip: {external_id: "23075", url_slug: astrahan}
+      aviakassa: {external_id: "2020600"}
+  - name: Самара
+    slug: samara
+    timezone: Europe/Samara
+    sources:
+      tutu: {external_id: "2024000", url_slug: Samara}
+      onetwotrip: {external_id: "25804", url_slug: samara}
+      aviakassa: {external_id: "2024000"}
+  - name: Краснодар
+    slug: krasnodar
+    timezone: Europe/Moscow
+    sources:
+      tutu: {external_id: "2064788", url_slug: Krasnodar}
+      onetwotrip: {external_id: "22851", url_slug: krasnodar}
+      aviakassa: {external_id: "2064788"}
+  - name: Адлер
+    slug: adler
+    timezone: Europe/Moscow
+    sources:
+      tutu: {external_id: "2064150", url_slug: Adler}
+      onetwotrip: {external_id: "22913", url_slug: adler}
+      aviakassa: {external_id: "2064130"}
+  - name: Минеральные Воды
+    slug: mineralnye-vody
+    timezone: Europe/Moscow
+    sources:
+      tutu: {external_id: "2064170", url_slug: Mineralnye_Vody}
+      onetwotrip: {external_id: "24429", url_slug: mineralnye-vody}
+      aviakassa: {external_id: "2064170"}
+  - name: Кисловодск
+    slug: kislovodsk
+    timezone: Europe/Moscow
+    sources:
+      tutu: {external_id: "2064050", url_slug: Kislovodsk}
+      onetwotrip: {external_id: "24926", url_slug: kislovodsk}
+      aviakassa: {external_id: "2064050"}
+  - name: Нижний Новгород
+    slug: nizhniy-novgorod
+    timezone: Europe/Moscow
+    sources:
+      tutu: {external_id: "2060000", url_slug: Nizhnij-Novgorod}
+      onetwotrip: {external_id: "22827", url_slug: nizhnii-novgorod}
+      aviakassa: {external_id: "2060000"}
+  - name: Казань
+    slug: kazan
+    timezone: Europe/Moscow
+    sources:
+      tutu: {external_id: "2060615", url_slug: Kazan}
+      onetwotrip: {external_id: "36479", url_slug: kazan}
+      aviakassa: {external_id: "2060615"}
+  - name: Екатеринбург
+    slug: ekaterinburg
+    timezone: Asia/Yekaterinburg
+    sources:
+      tutu: {external_id: "2030000", url_slug: Ekaterinburg}
+      onetwotrip: {external_id: "23868", url_slug: ekaterinburg}
+      aviakassa: {external_id: "2030000"}
+
+routes:
+  - {origin: volgograd, destination: moskva, is_scheduled: true}
+  - {origin: volgograd, destination: sankt-peterburg, is_scheduled: true}
+  - {origin: volgograd, destination: saratov, is_scheduled: true}
+  - {origin: volgograd, destination: rostov-na-donu, is_scheduled: true}
+  - {origin: volgograd, destination: astrahan, is_scheduled: true}
+  - {origin: volgograd, destination: samara, is_scheduled: true}
+  - {origin: volgograd, destination: krasnodar, is_scheduled: true}
+  - {origin: volgograd, destination: adler, is_scheduled: true}
+  - {origin: volgograd, destination: mineralnye-vody, is_scheduled: true}
+  - {origin: volgograd, destination: kislovodsk, is_scheduled: true}
+  - {origin: volgograd, destination: nizhniy-novgorod, is_scheduled: true}
+  - {origin: volgograd, destination: kazan, is_scheduled: true}
+  - {origin: volgograd, destination: ekaterinburg, is_scheduled: true}
