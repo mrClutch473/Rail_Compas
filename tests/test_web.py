@@ -245,3 +245,10 @@ def test_duration_and_ago():
     assert duration(1452) == "1 д"
     assert ago(timezone.now() - timedelta(minutes=20)) == "20 мин назад"
     assert ago(None) == "ещё не обновлялось"
+
+
+def test_small_percent_is_not_zero():
+    from apps.web.templatetags.ui import percent
+
+    assert percent(0.4) == "<1%"
+    assert percent(6.3) == "6%"

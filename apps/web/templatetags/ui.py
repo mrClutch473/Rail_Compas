@@ -77,7 +77,10 @@ def get(mapping, key):
 
 @register.filter
 def percent(value) -> str:
-    return f"{round(float(value))}%"
+    number = float(value)
+    if 0 < abs(number) < 1:
+        return "<1%"
+    return f"{round(number)}%"
 
 
 ICONS = {
