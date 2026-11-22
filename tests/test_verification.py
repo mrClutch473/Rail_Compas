@@ -66,3 +66,13 @@ def test_commands_write_and_score(world, sheet, tmp_path):
 def test_sync_option_queues_jobs(world):
     call_command("verification_sheet", "--routes", "1", "--days", "1,7", "--sync")
     assert SyncJob.objects.filter(trigger="admin").count() == 2
+
+
+def test_price_report_prints_tables(world):
+    job = SyncJobFactory(route=world["route"], travel_date=world["day"], status="done")
+    add_train(world, "001Ж", 15, 17, {"tutu": "5000", "ott": "5600"}, job=job)
+    out = io.StringIO()
+    call_command("price_report", "--days", "1", stdout=out)
+    text = out.getvalue()
+    assert "| Туту | 1 | 100% |" in text
+    assert "Самая большая разница: 600 ₽" in text
