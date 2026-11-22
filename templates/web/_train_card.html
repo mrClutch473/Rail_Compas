@@ -9,7 +9,7 @@
       </div>
 
       <div class="flex min-w-0 flex-col items-center gap-1.5 text-center">
-        <span class="badge bg-night text-white dark:bg-brand-soft dark:text-brand">{{ train.trip.train_number }}</span>
+        <span class="badge bg-night text-white dark:bg-brand-soft dark:text-brand" {% if train.trip.alt_numbers %}title="Поезд меняет номер в пути"{% endif %}>{{ train.trip.train_number }}{% for n in train.trip.alt_numbers %} / {{ n }}{% endfor %}</span>
         <div class="relative flex w-full items-center">
           <span class="h-2.5 w-2.5 shrink-0 rounded-full border-2 border-brand bg-surface"></span>
           <span class="h-0.5 flex-1 bg-[repeating-linear-gradient(90deg,var(--border-strong)_0_6px,transparent_6px_10px)]"></span>
