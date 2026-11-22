@@ -89,6 +89,16 @@ def test_no_seats_error_means_empty_day(adapter):
     assert "мест нет" in result.warnings[0].detail
 
 
+def test_no_trains_on_date_means_empty_day(adapter):
+    request, capture = load_raw(FIXTURES / "regular.json.gz")
+    capture = copy.deepcopy(capture)
+    capture.payloads[-1]["body"] = {
+        "success": False,
+        "error": {"code": 1310, "details": "В запрашиваемую дату поездов нет"},
+    }
+    assert adapter.parse(capture, request).is_empty
+
+
 @pytest.mark.parametrize(
     "body",
     [

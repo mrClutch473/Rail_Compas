@@ -16,7 +16,8 @@ from . import SourceAdapter, register
 
 TIMETABLE_URL = "https://www.onetwotrip.com/_railways/rzd/metaTimetable"
 BEDDING_MARKUP = "bedding_markup"
-NO_SEATS_ERRORS = {1311}  # "На заданном направлении (или поезде) мест нет"
+# 1310 "no trains on that date", 1311 "no seats on the route"
+NO_SEATS_ERRORS = {1310, 1311}
 # Sent after ~100 requests in 10 minutes from one IP: their rate limit, not a broken format
 RATE_LIMIT_ERRORS = {"ATTEMPTS_EXCEEDED"}
 
