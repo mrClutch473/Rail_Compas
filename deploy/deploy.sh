@@ -3,7 +3,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 
-COMPOSE="docker compose -f deploy/docker-compose.prod.yml"
+COMPOSE="docker compose --env-file .env -f deploy/docker-compose.prod.yml"
 
 git pull --ff-only
 $COMPOSE build
