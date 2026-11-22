@@ -8,7 +8,7 @@ OneTwoTrip's commission (`gdsCost`). That is the carrier tariff we show as "Та
 import math
 from decimal import Decimal
 
-from ..errors import LayoutChanged
+from ..errors import BlockedError, LayoutChanged
 from ..normalize import aware, car_class_from, normalize_train_number, to_price
 from ..schemas import Notice, ParseResult, RawCapture, RawOffer, ScrapeRequest
 from ..transport import FetchContext
@@ -17,6 +17,8 @@ from . import SourceAdapter, register
 TIMETABLE_URL = "https://www.onetwotrip.com/_railways/rzd/metaTimetable"
 BEDDING_MARKUP = "bedding_markup"
 NO_SEATS_ERRORS = {1311}  # "На заданном направлении (или поезде) мест нет"
+# Sent after ~100 requests in 10 minutes from one IP: their rate limit, not a broken format
+RATE_LIMIT_ERRORS = {"ATTEMPTS_EXCEEDED"}
 
 
 @register
@@ -45,8 +47,13 @@ class OneTwoTripAdapter(SourceAdapter):
         body = capture.payloads[-1].get("body") if capture.payloads else None
         if not isinstance(body, dict):
             raise LayoutChanged("onetwotrip: expected a JSON object")
+        error = body.get("error")
+        if isinstance(error, str) and error in RATE_LIMIT_ERRORS:
+            raise BlockedError(f"onetwotrip: rate limited ({error})")
         if not body.get("success", False):
             error = body.get("error") or {}
+            if not isinstance(error, dict):
+                raise LayoutChanged(f"onetwotrip: error {str(error)[:100]}")
             if error.get("code") in NO_SEATS_ERRORS:
                 notice = Notice(code="source_warning", detail=str(error.get("details", ""))[:300])
                 return ParseResult(is_empty=True, warnings=[notice])

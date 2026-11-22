@@ -7,7 +7,7 @@ import pytest
 
 from scraper.adapters import get_adapter
 from scraper.enums import CarClass
-from scraper.errors import LayoutChanged
+from scraper.errors import BlockedError, LayoutChanged
 from scraper.storage import load_raw
 
 FIXTURES = Path(__file__).parent / "fixtures" / "onetwotrip"
@@ -111,3 +111,23 @@ def test_route_page_link(adapter):
     assert adapter.offer_url(request) == (
         "https://www.onetwotrip.com/ru/poezda/volgograd_moskva/?date=05122026&adults=1&s=true"
     )
+
+
+def test_rate_limit_answer_is_a_block_not_a_crash(adapter):
+    request, capture = load_raw(FIXTURES / "regular.json.gz")
+    capture = copy.deepcopy(capture)
+    capture.payloads[-1]["body"] = {
+        "error": "ATTEMPTS_EXCEEDED",
+        "result": [],
+        "meta": {"time": 10},
+    }
+    with pytest.raises(BlockedError):
+        adapter.parse(capture, request)
+
+
+def test_string_error_is_layout_change(adapter):
+    request, capture = load_raw(FIXTURES / "regular.json.gz")
+    capture = copy.deepcopy(capture)
+    capture.payloads[-1]["body"] = {"error": "SOMETHING_NEW"}
+    with pytest.raises(LayoutChanged):
+        adapter.parse(capture, request)
