@@ -38,6 +38,11 @@ services:
   worker:
     <<: *app
     command: python manage.py run_worker
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.dev
+      DATABASE_URL: postgres://railcompas:railcompas@db:5432/railcompas
+      # background refresh hits the sellers all day long; keep it for the server
+      SCHEDULER_ENABLED: ${SCHEDULER_ENABLED:-false}
 
 volumes:
   pgdata:

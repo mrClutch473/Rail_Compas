@@ -17,6 +17,8 @@ docker compose up --build
 
 Сайт — http://localhost:8000, админка — http://localhost:8000/admin/. Поднимаются `db` (PostgreSQL), `web` (Django) и `worker` (фоновая синхронизация).
 
+Фоновое расписание локально выключено (оно весь день опрашивает площадки). Включить: `SCHEDULER_ENABLED=true docker compose up -d worker`. Посмотреть, что устарело: `docker compose exec web python manage.py schedule --dry-run`.
+
 ## Разработка без Docker для Django
 
 ```bash

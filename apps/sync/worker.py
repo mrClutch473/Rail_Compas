@@ -5,6 +5,7 @@ Requests to the same seller still go one by one through the shared Throttle."""
 
 import asyncio
 import logging
+import time
 from collections.abc import Callable
 
 from asgiref.sync import sync_to_async
@@ -19,10 +20,12 @@ from scraper.config import ScraperConfig
 from scraper.enums import ResultStatus
 from scraper.runner import Runner
 from scraper.schemas import CityRef, ScrapeRequest, ScrapeResult
+from scraper.storage import cleanup_raw
 from scraper.throttle import SourceLimits, Throttle
 
 from .ingest import ingest_result
 from .models import SyncJob, SyncTask
+from .scheduler import schedule_tick
 from .services import claim_next_job, finish_job, recover_stale_jobs
 
 log = logging.getLogger("worker")
@@ -78,8 +81,13 @@ class Worker:
         idle_sleep: float = 1.0,
         runner: Runner | None = None,
         adapter_factory: Callable[[str], SourceAdapter] = get_adapter,
+        schedule: bool | None = None,
     ):
         config = ScraperConfig()
+        self.config = config
+        self.schedule = settings.SCHEDULER_ENABLED if schedule is None else schedule
+        self._next_tick = 0.0
+        self._next_cleanup = 0.0
         self.slots = slots or settings.WORKER_SLOTS
         self.idle_sleep = idle_sleep
         self.throttle = runner.throttle if runner else Throttle(config.state_file)
@@ -108,6 +116,7 @@ class Worker:
 
         running: set[asyncio.Task] = set()
         while not self.stopping:
+            await self._housekeeping()
             if len(running) < self.slots:
                 job = await sync_to_async(claim_next_job)()
                 if job:
@@ -124,6 +133,22 @@ class Worker:
             await asyncio.gather(*running, return_exceptions=True)
         await self.close()
         log.info("worker stopped")
+
+    async def _housekeeping(self) -> None:
+        now = time.monotonic()
+        if self.schedule and now >= self._next_tick:
+            self._next_tick = now + settings.SCHEDULE_TICK_SECONDS
+            await sync_to_async(self.configure_limits)()
+            created = await sync_to_async(schedule_tick)()
+            if created:
+                log.info("schedule: queued %d jobs", len(created))
+        if now >= self._next_cleanup:
+            self._next_cleanup = now + 24 * 3600
+            removed = await asyncio.to_thread(
+                cleanup_raw, self.config.raw_dir, self.config.raw_retention_days
+            )
+            if removed:
+                log.info("removed %d old raw folders", removed)
 
     async def close(self) -> None:
         await sync_to_async(connections.close_all)()
