@@ -190,6 +190,9 @@ class SourceAdapter(ABC):
 
 ## Окружение и prod
 
+Сервер (с 22.11.2026): `/opt/railcompas` (git clone), `.env` с секретами только на сервере (права 600), `sh deploy/deploy.sh` обновляет. Сайт на `127.0.0.1:8000` — смотреть через SSH-туннель, наружу откроется с доменом и HTTPS (фаза 14). Дампы разведки — `/opt/railcompas-recon`.
+
+
 Переменные: `DJANGO_SETTINGS_MODULE`, `DJANGO_SECRET_KEY`, `DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, `DJANGO_ADMIN_URL`, `DATABASE_URL`, `SCRAPER_PROXIES`, `SCRAPER_HEADLESS`, `WORKER_SLOTS`. Секреты только в `.env` (не в git, не в чат).
 
 Prod: Ubuntu 24.04, compose (`web` Gunicorn, `worker` с лимитом памяти, `db` без внешнего порта, `nginx`, `certbot`), `check --deploy` чистый, HSTS, secure cookies, ограничение попыток входа в админку, `pg_dump` ежедневно ×7 + еженедельно к автору, `/healthz/` (БД, сигнал воркера, свежесть площадок) + внешний мониторинг.
