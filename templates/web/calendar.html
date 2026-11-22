@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% load ui %}
+
+{% block title %}Календарь цен {{ origin.name }} → {{ destination.name }} — ЖД Компас{% endblock %}
+{% block description %}Самые дешёвые дни для поездки {{ origin.name }} — {{ destination.name }}: минимальные цены на ближайшие недели.{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-6xl px-4">
+  <div class="mt-8 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="flex flex-wrap items-center gap-x-3 text-2xl font-semibold sm:text-4xl">
+        <span>{{ origin.name }}</span><span class="text-needle">{% icon "arrow-right" 30 %}</span><span>{{ destination.name }}</span>
+      </h1>
+      <p class="mt-2 text-muted">Календарь минимальных цен{% if cheapest %} · самый дешёвый день от {{ cheapest|rub }}{% endif %}</p>
+    </div>
+    <div class="flex items-center gap-2 text-xs text-muted" aria-hidden="true">
+      <span>дешевле</span>
+      {% for n in "12345" %}<span class="h-3 w-6 rounded" style="background: var(--heat-{{ n }})"></span>{% endfor %}
+      <span>дороже</span>
+    </div>
+  </div>
+
+  <div class="mt-6 grid gap-4 lg:grid-cols-2">
+    {% for month in months %}
+      <section class="card p-5">
+        <h2 class="text-lg font-semibold capitalize">{{ month.title|date:"F Y" }}</h2>
+        <div class="mt-4 grid grid-cols-7 gap-1.5 text-center">
+          {% for w in weekdays %}<div class="pb-1 text-[11px] font-bold uppercase tracking-wider text-faint">{{ w }}</div>{% endfor %}
+          {% for week in month.weeks %}
+            {% for d in week %}
+              {% if not d %}
+                <div></div>
+              {% elif not d.in_range %}
+                <div class="flex aspect-square flex-col items-center justify-center rounded-xl text-sm text-faint/60">{{ d.day.day }}</div>
+              {% else %}
+                <a href="{% url 'web:results' origin.slug destination.slug d.day|date:'Y-m-d' %}"
+                   title="{{ d.day|date:'j E' }}{% if d.price %}: от {{ d.price|rub }}{% else %}: цены ещё не собраны{% endif %}"
+                   class="relative flex aspect-square flex-col items-center justify-center rounded-xl transition hover:ring-2 hover:ring-brand {% if d.level >= 4 %}text-white{% else %}text-text{% endif %}"
+                   style="background: var(--heat-{{ d.level }})">
+                  <span class="text-sm font-bold">{{ d.day.day }}</span>
+                  {% if d.price %}<span class="tabular hidden text-[10px] font-semibold opacity-90 sm:block">{{ d.price|rub|cut:" ₽" }}</span>{% endif %}
+                  {% if d.cheapest %}<span class="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-best text-white ring-2 ring-surface">{% icon "check" 10 %}</span>{% endif %}
+                </a>
+              {% endif %}
+            {% endfor %}
+          {% endfor %}
+        </div>
+      </section>
+    {% endfor %}
+  </div>
+  <p class="mt-4 text-sm text-muted">Цены — минимальные среди площадок по последним обновлениям за двое суток. Серые дни ещё не собраны: откройте день, и мы запросим цены.</p>
+</div>
+{% endblock %}

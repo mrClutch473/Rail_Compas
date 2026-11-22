@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 
 from django import template
+from django.core.cache import cache
 from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
@@ -68,6 +69,26 @@ def ago(moment: datetime | None) -> str:
     if local.date() == today - timedelta(days=1):
         return f"вчера в {local:%H:%M}"
     return f"{local:%d.%m} в {local:%H:%M}"
+
+
+def _series_slots() -> dict[str, int]:
+    slots = cache.get("series-slots")
+    if slots is None:
+        from apps.catalog.models import Source
+
+        codes = Source.objects.filter(is_reference=False).order_by("priority", "code")
+        slots = {code: i + 1 for i, code in enumerate(codes.values_list("code", flat=True))}
+        cache.set("series-slots", slots, 300)
+    return slots
+
+
+@register.filter
+def series(source) -> str:
+    """CSS colour of a seller: fixed slot by priority, never by price rank."""
+    if source.is_reference:
+        return "var(--series-ref)"
+    slot = _series_slots().get(source.code, 0)
+    return f"var(--series-{slot})" if 1 <= slot <= 3 else "var(--muted)"
 
 
 @register.filter

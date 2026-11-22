@@ -22,7 +22,7 @@
     <div class="mt-5 grid gap-2 sm:grid-cols-2">
       {% for source in sources %}
         <div class="flex items-start gap-3 rounded-2xl bg-surface-muted p-4">
-          <span class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full" style="background: {{ source.color }}"></span>
+          <span class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full" style="background: {{ source|series }}"></span>
           <div>
             <div class="font-semibold">{{ source.name }}{% if source.is_reference %} <span class="badge ml-1 bg-surface text-muted">эталон</span>{% endif %}</div>
             <div class="text-sm text-muted">{{ source.price_note|default:"Цена площадки на витрине" }}</div>

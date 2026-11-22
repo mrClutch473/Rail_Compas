@@ -7,18 +7,32 @@ from django.db import connection
 from django.db.models import F
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from apps.analytics.services import cached_report
 from apps.catalog.models import City, Route, Source
-from apps.core.enums import ACTIVE_JOB_STATUSES, SyncTrigger
-from apps.offers.models import PriceSnapshot
+from apps.core.enums import ACTIVE_JOB_STATUSES, CarClass, SyncTrigger
+from apps.offers.models import PriceSnapshot, Trip
 from apps.offers.selectors import current_snapshots, source_states
 from apps.sync.models import SyncJob
 from apps.sync.services import request_sync, sources_for_route
 
 from .models import ClickOut
-from .presenters import SALE_DAYS, build_trains, date_strip, freshest, popular_routes
+from .presenters import (
+    DEPARTURE_WINDOWS,
+    SALE_DAYS,
+    SORTS,
+    Filters,
+    apply_filters,
+    build_trains,
+    date_strip,
+    freshest,
+    popular_routes,
+    price_calendar,
+    trip_history,
+)
 
 SYNC_CLICKS_PER_WINDOW = 10
 SYNC_WINDOW_SECONDS = 600
@@ -97,12 +111,22 @@ def results(request, origin: str, destination: str, day: str):
         job = request_sync(route, travel_date, SyncTrigger.USER).job
 
     sellers = [s.source for s in states]
+    all_trains = build_trains(route, travel_date, sellers)
+    filters = Filters.from_query(request.GET)
+    present = {row.car_class for train in all_trains for row in train.classes}
     context.update(
         route=route,
         states=states,
         sellers=sellers,
         job=job,
-        trains=build_trains(route, travel_date, sellers),
+        trains=apply_filters(all_trains, filters),
+        total_trains=len(all_trains),
+        filters=filters,
+        class_options=[c for c in CarClass if c.value in present],
+        departure_options=[(k, label) for k, (_, _, label) in DEPARTURE_WINDOWS.items()],
+        sort_options=SORTS.items(),
+        hour_options=[12, 18, 24, 36],
+        query=request.GET.urlencode(),
         days=date_strip(route, travel_date),
         synced_at=freshest(states),
     )
@@ -220,3 +244,100 @@ def healthz(request):
     except Exception:
         return JsonResponse({"status": "error", "db": False}, status=503)
     return JsonResponse({"status": "ok", "db": True})
+
+
+def trip_detail(request, trip_id: int):
+    trip = get_object_or_404(
+        Trip.objects.select_related(
+            "route__origin", "route__destination", "origin_station", "destination_station"
+        ),
+        pk=trip_id,
+    )
+    route = trip.route
+    states = source_states(route, trip.departure_date)
+    sellers = [s.source for s in states]
+    trains = build_trains(route, trip.departure_date, sellers)
+    train = next((t for t in trains if t.trip.pk == trip.pk), None)
+    history = trip_history(trip, sellers)
+    chart = {h.car_class: {"label": h.label, "series": h.series} for h in history}
+    selected = request.GET.get("class") or (history[0].car_class if history else "")
+    return render(
+        request,
+        "web/trip.html",
+        {
+            "trip": trip,
+            "origin": route.origin,
+            "destination": route.destination,
+            "travel_date": trip.departure_date,
+            "train": train,
+            "sellers": sellers,
+            "states": states,
+            "history": history,
+            "chart": chart,
+            "selected": selected,
+            "synced_at": freshest(states),
+        },
+    )
+
+
+def route_calendar(request, origin: str, destination: str):
+    route = get_object_or_404(
+        Route.objects.select_related("origin", "destination"),
+        origin__slug=origin,
+        destination__slug=destination,
+    )
+    months, cheapest = price_calendar(route)
+    return render(
+        request,
+        "web/calendar.html",
+        {
+            "route": route,
+            "origin": route.origin,
+            "destination": route.destination,
+            "months": months,
+            "cheapest": cheapest,
+            "weekdays": ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"],
+        },
+    )
+
+
+ANALYTICS_PERIODS = {1: "сутки", 7: "неделя", 30: "месяц"}
+
+
+def analytics(request):
+    try:
+        days = int(request.GET.get("days", 7))
+    except ValueError:
+        days = 7
+    if days not in ANALYTICS_PERIODS:
+        days = 7
+    report = cached_report(days)
+    widest = max((s.avg_markup or 0 for s in report.sellers), default=0) or 1
+    return render(
+        request,
+        "web/analytics.html",
+        {"report": report, "periods": ANALYTICS_PERIODS.items(), "widest_markup": widest},
+    )
+
+
+def robots_txt(request):
+    lines = [
+        "User-agent: *",
+        "Disallow: /go/",
+        "Disallow: /sync/",
+        "Disallow: /search/",
+        f"Sitemap: {request.build_absolute_uri('/sitemap.xml')}",
+    ]
+    return HttpResponse("\n".join(lines) + "\n", content_type="text/plain")
+
+
+def sitemap_xml(request):
+    pages = [reverse("web:home"), reverse("web:analytics"), reverse("web:about")]
+    for route in Route.objects.filter(is_scheduled=True).select_related("origin", "destination"):
+        pages.append(reverse("web:calendar", args=[route.origin.slug, route.destination.slug]))
+    urls = "".join(f"<url><loc>{request.build_absolute_uri(path)}</loc></url>" for path in pages)
+    body = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        f'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>'
+    )
+    return HttpResponse(body, content_type="application/xml")

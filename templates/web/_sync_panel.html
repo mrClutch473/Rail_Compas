@@ -20,7 +20,7 @@
         {% for state in states %}
           {% with task=tasks|get:state.source.pk %}
           <li class="flex items-center gap-1.5 text-muted">
-            <span class="h-2 w-2 rounded-full" style="background: {{ state.source.color }}"></span>
+            <span class="h-2 w-2 rounded-full" style="background: {{ state.source|series }}"></span>
             <span class="font-semibold text-text">{{ state.source.name }}</span>
             {% if job and task %}
               {% if task.status == "pending" or task.status == "running" %}

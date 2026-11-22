@@ -3,10 +3,10 @@
 # (scraper/recon/resolve_cities.py); Voronezh dropped — no direct trains.
 
 sources:
-  - {code: tutu, name: Туту, base_url: "https://www.tutu.ru", priority: 10, color: "#7c4dff", fee_policy: unknown, min_interval_sec: 3, daily_budget: 3000}
-  - {code: onetwotrip, name: OneTwoTrip, base_url: "https://www.onetwotrip.com", priority: 20, color: "#0094ff", fee_policy: included, price_note: "Цена с комиссией OneTwoTrip", min_interval_sec: 3, daily_budget: 3000}
-  - {code: aviakassa, name: Aviakassa, base_url: "https://www.aviakassa.com", priority: 30, color: "#ff7a00", fee_policy: unknown, min_interval_sec: 3, daily_budget: 3000}
-  - {code: rzd_base, name: "Тариф РЖД", base_url: "https://ticket.rzd.ru", priority: 90, color: "#64748b", is_reference: true, fee_policy: excluded, price_note: "Базовая цена перевозчика без наценки площадок", min_interval_sec: 0, daily_budget: 0}
+  - {code: tutu, name: Туту, base_url: "https://www.tutu.ru", priority: 10, color: "#2a78d6", fee_policy: unknown, min_interval_sec: 3, daily_budget: 3000}
+  - {code: onetwotrip, name: OneTwoTrip, base_url: "https://www.onetwotrip.com", priority: 20, color: "#eb6834", fee_policy: included, price_note: "Цена с комиссией OneTwoTrip", min_interval_sec: 3, daily_budget: 3000}
+  - {code: aviakassa, name: Aviakassa, base_url: "https://www.aviakassa.com", priority: 30, color: "#1baf7a", fee_policy: unknown, min_interval_sec: 3, daily_budget: 3000}
+  - {code: rzd_base, name: "Тариф РЖД", base_url: "https://ticket.rzd.ru", priority: 90, color: "#8a93a6", is_reference: true, fee_policy: excluded, price_note: "Базовая цена перевозчика без наценки площадок", min_interval_sec: 0, daily_budget: 0}
 
 cities:
   - name: Волгоград

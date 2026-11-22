@@ -33,9 +33,12 @@
         {% if trains %}· {{ trains|length|plural:"поезд,поезда,поездов" }}{% endif %}
       </p>
     </div>
-    <a href="{% url 'web:results' destination.slug origin.slug travel_date|date:'Y-m-d' %}" class="btn-outline">
-      {% icon "swap" 16 %} Обратно
-    </a>
+    <div class="flex gap-2">
+      {% if route %}<a href="{% url 'web:calendar' origin.slug destination.slug %}" class="btn-outline">{% icon "calendar" 16 %} Календарь цен</a>{% endif %}
+      <a href="{% url 'web:results' destination.slug origin.slug travel_date|date:'Y-m-d' %}" class="btn-outline">
+        {% icon "swap" 16 %} Обратно
+      </a>
+    </div>
   </div>
 
   {% if too_far %}
@@ -53,7 +56,7 @@
   {% else %}
     <nav class="-mx-4 mt-6 flex gap-2 overflow-x-auto px-4 pb-1" aria-label="Соседние даты">
       {% for d in days %}
-        <a href="{% url 'web:results' origin.slug destination.slug d.day|date:'Y-m-d' %}"
+        <a href="{% url 'web:results' origin.slug destination.slug d.day|date:'Y-m-d' %}{% if query %}?{{ query }}{% endif %}"
            class="flex min-w-[76px] flex-col items-center rounded-2xl border px-2.5 py-2 sm:min-w-[92px] sm:px-3 sm:py-2.5 text-center transition {% if d.is_current %}border-brand bg-brand text-white shadow-card{% else %}border-border bg-surface hover:border-brand/50{% endif %}">
           <span class="text-xs font-semibold uppercase {% if d.is_current %}text-white/80{% else %}text-faint{% endif %}">{{ d.day|date:"D" }}</span>
           <span class="text-sm font-bold whitespace-nowrap">{{ d.day|date:"j b" }}</span>
@@ -64,7 +67,40 @@
 
     {% include "web/_sync_panel.html" %}
 
-    <div class="mt-6 space-y-4" id="trains">
+    {% if total_trains %}
+      <form class="mt-6 flex flex-wrap items-center gap-2" method="get"
+            hx-get="{{ request.path }}" hx-target="#trains-block" hx-select="#trains-block"
+            hx-swap="outerHTML" hx-push-url="true" hx-trigger="change">
+        {% if class_options|length > 1 %}
+          <div class="flex flex-wrap gap-1 rounded-2xl bg-surface p-1 ring-1 ring-border">
+            <label class="cursor-pointer"><input class="peer sr-only" type="radio" name="class" value="" {% if not filters.car_class %}checked{% endif %}><span class="block rounded-xl px-3 py-1.5 text-sm font-semibold text-muted peer-checked:bg-brand peer-checked:text-white">Все</span></label>
+            {% for c in class_options %}
+              <label class="cursor-pointer"><input class="peer sr-only" type="radio" name="class" value="{{ c.value }}" {% if filters.car_class == c.value %}checked{% endif %}><span class="block rounded-xl px-3 py-1.5 text-sm font-semibold text-muted peer-checked:bg-brand peer-checked:text-white">{{ c.label }}</span></label>
+            {% endfor %}
+          </div>
+        {% endif %}
+        <select name="dep" class="rounded-2xl bg-surface px-3 py-2 text-sm font-semibold ring-1 ring-border" aria-label="Время отправления">
+          <option value="">Отправление: любое</option>
+          {% for key, label in departure_options %}<option value="{{ key }}" {% if filters.departure == key %}selected{% endif %}>Отправление {{ label }}</option>{% endfor %}
+        </select>
+        <select name="hours" class="rounded-2xl bg-surface px-3 py-2 text-sm font-semibold ring-1 ring-border" aria-label="Время в пути">
+          <option value="">В пути: любое</option>
+          {% for h in hour_options %}<option value="{{ h }}" {% if filters.max_hours == h %}selected{% endif %}>В пути до {{ h }} ч</option>{% endfor %}
+        </select>
+        <select name="sort" class="ml-auto rounded-2xl bg-surface px-3 py-2 text-sm font-semibold ring-1 ring-border" aria-label="Сортировка">
+          {% for key, label in sort_options %}<option value="{{ key }}" {% if filters.sort == key %}selected{% endif %}>Сортировать {{ label }}</option>{% endfor %}
+        </select>
+        <noscript><button class="btn-outline" type="submit">Применить</button></noscript>
+      </form>
+    {% endif %}
+
+    <div class="mt-4 space-y-4" id="trains-block">
+      {% if filters.active and total_trains %}
+        <div class="flex items-center justify-between text-sm text-muted">
+          <span>Показано {{ trains|length }} из {{ total_trains|plural:"поезда,поездов,поездов" }}</span>
+          <a class="font-semibold text-brand hover:underline" href="{{ request.path }}">Сбросить фильтры</a>
+        </div>
+      {% endif %}
       {% if trains %}
         {% for train in trains %}
           {% include "web/_train_card.html" %}
@@ -80,6 +116,12 @@
             <div class="mt-6 h-12 rounded-2xl bg-surface-muted"></div>
           </div>
         {% endfor %}
+      {% elif total_trains %}
+        <div class="card p-10 text-center">
+          <h2 class="text-xl font-semibold">Под фильтры ничего не подошло</h2>
+          <p class="mx-auto mt-2 max-w-md text-muted">Попробуйте другое время отправления или класс вагона.</p>
+          <a href="{{ request.path }}" class="btn-outline mt-5">Сбросить фильтры</a>
+        </div>
       {% else %}
         <div class="card p-10 text-center">
           <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-muted text-muted">{% icon "train" 26 %}</div>

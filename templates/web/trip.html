@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% load static ui %}
+
+{% block title %}Поезд {{ trip.train_number }}, {{ origin.name }} → {{ destination.name }}, {{ travel_date|date:"j E" }} — ЖД Компас{% endblock %}
+{% block description %}История цены поезда {{ trip.train_number }} {{ origin.name }} — {{ destination.name }} на {{ travel_date|date:"j E" }} на разных площадках.{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-6xl px-4">
+  <nav class="mt-6 flex items-center gap-2 text-sm text-muted">
+    <a class="hover:text-brand" href="{% url 'web:results' origin.slug destination.slug travel_date|date:'Y-m-d' %}">{{ origin.name }} → {{ destination.name }}, {{ travel_date|date:"j E" }}</a>
+    <span>/</span>
+    <span class="font-semibold text-text">Поезд {{ trip.train_number }}</span>
+  </nav>
+
+  <h1 class="mt-3 text-2xl font-semibold sm:text-4xl">Поезд {{ trip.train_number }}{% for n in trip.alt_numbers %} / {{ n }}{% endfor %}</h1>
+  <p class="mt-2 text-muted">{{ travel_date|date:"l, j E" }}{% if trip.train_name %} · «{{ trip.train_name }}»{% endif %}</p>
+
+  {% if train %}
+    <div class="mt-6">{% include "web/_train_card.html" with hide_history_link=True %}</div>
+  {% endif %}
+
+  <section class="card mt-6 p-5 sm:p-6">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h2 class="text-xl font-semibold">История цены</h2>
+        <p class="mt-1 text-sm text-muted">Минимальная цена класса на каждой площадке при каждом обновлении</p>
+      </div>
+      {% if history|length > 1 %}
+        <div class="flex flex-wrap gap-1 rounded-2xl bg-surface-muted p-1" role="tablist">
+          {% for h in history %}
+            <button type="button" role="tab" data-class-tab="{{ h.car_class }}"
+                    class="rounded-xl px-3 py-1.5 text-sm font-semibold text-muted aria-selected:bg-surface aria-selected:text-text aria-selected:shadow-sm"
+                    aria-selected="{% if h.car_class == selected %}true{% else %}false{% endif %}">{{ h.label }}</button>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+    {% if history %}
+      {% for h in history %}
+        <div data-class-panel="{{ h.car_class }}" {% if h.car_class != selected %}hidden{% endif %}>
+          <div class="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div class="rounded-2xl bg-surface-muted p-4">
+              <div class="text-xs font-semibold uppercase tracking-wider text-faint">Сейчас лучшая</div>
+              <div class="tabular mt-1 text-xl font-extrabold">{{ h.last_best|rub }}</div>
+            </div>
+            <div class="rounded-2xl bg-surface-muted p-4">
+              <div class="text-xs font-semibold uppercase tracking-wider text-faint">Минимум</div>
+              <div class="tabular mt-1 text-xl font-extrabold">{{ h.low|rub }}</div>
+            </div>
+            <div class="rounded-2xl bg-surface-muted p-4">
+              <div class="text-xs font-semibold uppercase tracking-wider text-faint">Максимум</div>
+              <div class="tabular mt-1 text-xl font-extrabold">{{ h.high|rub }}</div>
+            </div>
+            <div class="rounded-2xl bg-surface-muted p-4">
+              <div class="text-xs font-semibold uppercase tracking-wider text-faint">С первого замера</div>
+              <div class="tabular mt-1 text-xl font-extrabold">
+                {% if h.change is None or h.points < 2 %}—{% elif h.change > 0 %}<span class="text-danger">+{{ h.change|rub }}</span>{% elif h.change < 0 %}<span class="text-best">−{{ h.change|cut:"-"|rub }}</span>{% else %}без изменений{% endif %}
+              </div>
+            </div>
+          </div>
+          {% if h.points < 2 %}
+            <p class="mt-4 flex items-center gap-2 rounded-2xl bg-brand-soft px-4 py-3 text-sm font-medium text-brand">
+              {% icon "info" 16 %} Пока один замер — линия появится после следующих обновлений.
+            </p>
+          {% endif %}
+        </div>
+      {% endfor %}
+
+      <ul class="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm" data-legend></ul>
+      <div class="relative mt-3 h-72 sm:h-80">
+        <canvas id="price-chart" aria-label="График истории цены" role="img"></canvas>
+      </div>
+
+      {% for h in history %}
+        <details class="mt-5 rounded-2xl bg-surface-muted/60 p-4" data-class-panel="{{ h.car_class }}" {% if h.car_class != selected %}hidden{% endif %}>
+          <summary class="cursor-pointer text-sm font-semibold">Все замеры таблицей ({{ h.rows|length }})</summary>
+          <table class="mt-3 w-full text-sm">
+            <thead class="text-left text-xs uppercase tracking-wider text-faint">
+              <tr><th class="py-1.5 font-semibold">Время</th><th class="py-1.5 font-semibold">Площадка</th><th class="py-1.5 text-right font-semibold">Цена</th></tr>
+            </thead>
+            <tbody class="divide-y divide-border">
+              {% for row in h.rows %}
+                <tr>
+                  <td class="py-1.5 text-muted">{{ row.at|date:"d.m H:i" }}</td>
+                  <td class="py-1.5"><span class="mr-1.5 inline-block h-2 w-2 rounded-full" style="background: {{ row.source|series }}"></span>{{ row.source.name }}</td>
+                  <td class="tabular py-1.5 text-right font-semibold">{{ row.price|rub }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </details>
+      {% endfor %}
+    {% else %}
+      <p class="mt-4 text-muted">Цен по этому поезду ещё нет.</p>
+    {% endif %}
+  </section>
+</div>
+{{ chart|json_script:"chart-data" }}
+{% endblock %}
+
+{% block scripts %}
+  <script src="{% static 'vendor/chart.umd.min.js' %}" defer></script>
+  <script src="{% static 'js/price_chart.js' %}" defer data-selected="{{ selected }}"></script>
+{% endblock %}
