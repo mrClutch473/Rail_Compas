@@ -11,7 +11,12 @@ from apps.core.enums import (
 
 
 class SyncJob(models.Model):
-    route = models.ForeignKey("catalog.Route", on_delete=models.CASCADE, related_name="sync_jobs")
+    route = models.ForeignKey(
+        "catalog.Route",
+        verbose_name="направление",
+        on_delete=models.CASCADE,
+        related_name="sync_jobs",
+    )
     travel_date = models.DateField("дата поездки")
     trigger = models.CharField("источник запуска", max_length=16, choices=SyncTrigger.choices)
     priority = models.PositiveSmallIntegerField("приоритет", default=50)
@@ -44,10 +49,16 @@ class SyncJob(models.Model):
 
 
 class SyncTask(models.Model):
-    job = models.ForeignKey(SyncJob, on_delete=models.CASCADE, related_name="tasks")
-    source = models.ForeignKey("catalog.Source", on_delete=models.PROTECT, related_name="tasks")
+    job = models.ForeignKey(
+        SyncJob, verbose_name="задание", on_delete=models.CASCADE, related_name="tasks"
+    )
+    source = models.ForeignKey(
+        "catalog.Source", verbose_name="площадка", on_delete=models.PROTECT, related_name="tasks"
+    )
     # copied from the job to find the latest successful task per source quickly
-    route = models.ForeignKey("catalog.Route", on_delete=models.CASCADE, related_name="+")
+    route = models.ForeignKey(
+        "catalog.Route", verbose_name="направление", on_delete=models.CASCADE, related_name="+"
+    )
     travel_date = models.DateField("дата поездки")
     status = models.CharField(
         "статус", max_length=16, choices=SyncTaskStatus.choices, default=SyncTaskStatus.PENDING

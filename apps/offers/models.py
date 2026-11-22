@@ -5,7 +5,9 @@ from apps.core.enums import CarClass
 
 
 class Trip(models.Model):
-    route = models.ForeignKey("catalog.Route", on_delete=models.CASCADE, related_name="trips")
+    route = models.ForeignKey(
+        "catalog.Route", verbose_name="направление", on_delete=models.CASCADE, related_name="trips"
+    )
     train_number = models.CharField("поезд", max_length=10)
     alt_numbers = models.JSONField(
         "другие номера",
@@ -19,13 +21,23 @@ class Trip(models.Model):
     arrival_at = models.DateTimeField("прибытие")
     duration_min = models.PositiveIntegerField("в пути, мин")
     origin_station = models.ForeignKey(
-        "catalog.Station", on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+        "catalog.Station",
+        verbose_name="вокзал отправления",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
     )
     destination_station = models.ForeignKey(
-        "catalog.Station", on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+        "catalog.Station",
+        verbose_name="вокзал прибытия",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
     )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField("создан", auto_now_add=True)
+    updated_at = models.DateTimeField("обновлён", auto_now=True)
 
     class Meta:
         verbose_name = "рейс"
@@ -46,9 +58,18 @@ class Trip(models.Model):
 
 
 class PriceSnapshot(models.Model):
-    trip = models.ForeignKey(Trip, on_delete=models.CASCADE, related_name="snapshots")
-    source = models.ForeignKey("catalog.Source", on_delete=models.PROTECT, related_name="snapshots")
-    task = models.ForeignKey("sync.SyncTask", on_delete=models.CASCADE, related_name="snapshots")
+    trip = models.ForeignKey(
+        Trip, verbose_name="рейс", on_delete=models.CASCADE, related_name="snapshots"
+    )
+    source = models.ForeignKey(
+        "catalog.Source",
+        verbose_name="площадка",
+        on_delete=models.PROTECT,
+        related_name="snapshots",
+    )
+    task = models.ForeignKey(
+        "sync.SyncTask", verbose_name="задача", on_delete=models.CASCADE, related_name="snapshots"
+    )
     car_class = models.CharField("класс", max_length=16, choices=CarClass.choices)
     price = models.DecimalField("цена", max_digits=10, decimal_places=2)
     price_old = models.DecimalField(

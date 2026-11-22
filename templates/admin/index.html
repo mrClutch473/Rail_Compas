@@ -1,0 +1,91 @@
+{% extends "admin/base.html" %}
+{% load i18n unfold ui %}
+
+{% block title %}Сводка | {{ site_title }}{% endblock %}
+
+{% block branding %}
+  {% include "unfold/helpers/site_branding.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="rc-dash">
+  <div class="rc-grid rc-grid-4">
+    {% for label, value in kpis %}
+      {% component "unfold/components/card.html" %}
+        <div class="rc-kpi-label">{{ label }}</div>
+        <div class="rc-kpi-value">{{ value }}</div>
+      {% endcomponent %}
+    {% endfor %}
+  </div>
+
+  {% component "unfold/components/card.html" with title="Площадки" class="rc-gap" %}
+    <table class="rc-table">
+      <thead>
+        <tr><th>Площадка</th><th>Состояние</th><th>Задач за сутки</th><th>Успешных</th><th>Последние данные</th><th>Последняя ошибка</th></tr>
+      </thead>
+      <tbody>
+        {% for row in health %}
+          <tr>
+            <td><span class="rc-dot" style="background: {{ row.source|series }}"></span><b>{{ row.source.name }}</b></td>
+            <td>
+              {% include "unfold/helpers/label.html" with type=row.state.0 text=row.state.1 %}
+              {% if row.cooling %}<div class="rc-muted">до {{ row.cooling }}</div>{% endif %}
+            </td>
+            <td>{{ row.tasks }}</td>
+            <td>{% if row.rate is not None %}{{ row.rate|floatformat:0 }}%{% else %}—{% endif %}</td>
+            <td>{{ row.last_ok|ago }}</td>
+            <td class="rc-error" title="{{ row.last_error }}">{{ row.last_error|truncatechars:70|default:"—" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endcomponent %}
+
+  <div class="rc-grid rc-grid-3 rc-gap">
+    {% component "unfold/components/card.html" with title="Очередь и воркер" %}
+      <div class="rc-row"><span>В очереди</span><b>{{ queue.queued }}</b></div>
+      <div class="rc-row"><span>Выполняется</span><b>{{ queue.running }}</b></div>
+      <div class="rc-row"><span>Из них по расписанию</span><b>{{ queue.by_trigger.schedule|default:0 }}</b></div>
+      <div class="rc-row"><span>Пользователи и админ</span><b>{{ queue.people }}</b></div>
+      <div class="rc-row"><span>Последняя активность</span><b>{{ queue.last_activity|ago }}</b></div>
+    {% endcomponent %}
+
+    {% component "unfold/components/card.html" with title="Задания за сутки" %}
+      {% for label, value, kind in jobs_day %}
+        <div class="rc-row"><span>{% include "unfold/helpers/label.html" with type=kind text=label %}</span><b>{{ value }}</b></div>
+      {% endfor %}
+      <a class="rc-link" href="{% url 'admin:sync_syncjob_changelist' %}">Все задания →</a>
+    {% endcomponent %}
+
+    {% component "unfold/components/card.html" with title="Переходы на площадки за 7 дней" %}
+      <div class="rc-row"><span>Всего</span><b>{{ clicks.total }}</b></div>
+      <div class="rc-row"><span>На самую дешёвую цену</span><b>{{ clicks.cheapest }}</b></div>
+      {% for name, n in clicks.by_source %}
+        <div class="rc-row rc-muted"><span>{{ name }}</span><span>{{ n }}</span></div>
+      {% endfor %}
+    {% endcomponent %}
+  </div>
+
+  <div class="rc-grid rc-grid-2 rc-gap">
+    {% component "unfold/components/card.html" with title="Требует внимания" %}
+      {% for label, count, url in attention %}
+        <a class="rc-row rc-row-link" href="{{ url }}">
+          <span>{{ label }}</span>
+          {% if count %}{% include "unfold/helpers/label.html" with type="warning" text=count %}{% else %}{% include "unfold/helpers/label.html" with type="success" text="0" %}{% endif %}
+        </a>
+      {% endfor %}
+    {% endcomponent %}
+
+    {% component "unfold/components/card.html" with title="Последние задания" %}
+      {% for job in recent_jobs %}
+        <a class="rc-row rc-row-link" href="{% url 'admin:sync_syncjob_change' job.pk %}">
+          <span>{{ job.route }} · {{ job.travel_date|date:"d.m" }}</span>
+          <span class="rc-muted">{{ job.get_trigger_display }} · {{ job.created_at|ago }}</span>
+        </a>
+      {% empty %}
+        <div class="rc-muted">Заданий ещё не было</div>
+      {% endfor %}
+    {% endcomponent %}
+  </div>
+</div>
+{% endblock %}

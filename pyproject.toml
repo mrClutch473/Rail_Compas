@@ -12,6 +12,7 @@ dependencies = [
     "httpx>=0.28",
     "pydantic>=2.11",
     "pyyaml>=6.0",
+    "django-unfold>=0.70",
 ]
 
 [dependency-groups]

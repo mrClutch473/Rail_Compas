@@ -30,7 +30,9 @@ class City(models.Model):
 
 
 class Station(models.Model):
-    city = models.ForeignKey(City, on_delete=models.PROTECT, related_name="stations")
+    city = models.ForeignKey(
+        City, verbose_name="город", on_delete=models.PROTECT, related_name="stations"
+    )
     name = models.CharField("название", max_length=150)
     aliases = models.JSONField("варианты написания", default=list, blank=True)
     express_code = models.CharField("код Экспресс", max_length=16, blank=True)
@@ -83,8 +85,12 @@ class Source(models.Model):
 
 
 class SourceCity(models.Model):
-    source = models.ForeignKey(Source, on_delete=models.CASCADE, related_name="cities")
-    city = models.ForeignKey(City, on_delete=models.CASCADE, related_name="source_ids")
+    source = models.ForeignKey(
+        Source, verbose_name="площадка", on_delete=models.CASCADE, related_name="cities"
+    )
+    city = models.ForeignKey(
+        City, verbose_name="город", on_delete=models.CASCADE, related_name="source_ids"
+    )
     external_id = models.CharField("внешний ID", max_length=64)
     url_slug = models.CharField("слаг в адресе", max_length=100, blank=True)
 
@@ -100,8 +106,12 @@ class SourceCity(models.Model):
 
 
 class Route(models.Model):
-    origin = models.ForeignKey(City, on_delete=models.PROTECT, related_name="routes_from")
-    destination = models.ForeignKey(City, on_delete=models.PROTECT, related_name="routes_to")
+    origin = models.ForeignKey(
+        City, verbose_name="откуда", on_delete=models.PROTECT, related_name="routes_from"
+    )
+    destination = models.ForeignKey(
+        City, verbose_name="куда", on_delete=models.PROTECT, related_name="routes_to"
+    )
     slug = models.SlugField("слаг", unique=True)
     is_scheduled = models.BooleanField(
         "по расписанию", default=False, help_text="Обновлять в фоне, а не только по запросу"

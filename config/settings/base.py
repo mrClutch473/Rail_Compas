@@ -1,6 +1,8 @@
 from pathlib import Path
 
 import environ
+from django.templatetags.static import static
+from django.urls import reverse_lazy
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 
@@ -19,6 +21,7 @@ CSRF_TRUSTED_ORIGINS = env("DJANGO_CSRF_TRUSTED_ORIGINS")
 ADMIN_URL = env("DJANGO_ADMIN_URL")
 
 INSTALLED_APPS = [
+    "unfold",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -114,4 +117,80 @@ LOGGING = {
     "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "plain"}},
     "root": {"handlers": ["console"], "level": "INFO"},
     "loggers": {"django.db.backends": {"level": "WARNING"}},
+}
+
+
+def _nav(title, icon, url):
+    return {"title": title, "icon": icon, "link": reverse_lazy(url)}
+
+
+UNFOLD = {
+    "SITE_TITLE": "ЖД Компас",
+    "SITE_HEADER": "ЖД Компас",
+    "SITE_SUBHEADER": "Управление сервисом",
+    "SITE_URL": "/",
+    "SITE_ICON": lambda request: static("img/favicon.svg"),
+    "SITE_FAVICONS": [
+        {"rel": "icon", "type": "image/svg+xml", "href": lambda request: static("img/favicon.svg")}
+    ],
+    "SHOW_VIEW_ON_SITE": True,
+    "STYLES": [lambda request: static("css/admin.css")],
+    "DASHBOARD_CALLBACK": "apps.web.dashboard.dashboard_callback",
+    "ENVIRONMENT": "apps.web.dashboard.environment_callback",
+    "COLORS": {
+        "primary": {
+            "50": "#eef3ff",
+            "100": "#dbe5ff",
+            "200": "#bfd0ff",
+            "300": "#93b1ff",
+            "400": "#6189fb",
+            "500": "#3d68f2",
+            "600": "#2557e8",
+            "700": "#1d45c4",
+            "800": "#1d3b9c",
+            "900": "#1e357b",
+            "950": "#14214a",
+        },
+    },
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": False,
+        "navigation": [
+            {
+                "title": "Обзор",
+                "items": [_nav("Сводка", "dashboard", "admin:index")],
+            },
+            {
+                "title": "Сбор данных",
+                "items": [
+                    _nav("Задания синхронизации", "sync", "admin:sync_syncjob_changelist"),
+                    _nav("Задачи площадок", "task_alt", "admin:sync_synctask_changelist"),
+                ],
+            },
+            {
+                "title": "Данные",
+                "items": [
+                    _nav("Рейсы", "train", "admin:offers_trip_changelist"),
+                    _nav("Снимки цен", "payments", "admin:offers_pricesnapshot_changelist"),
+                    _nav("Переходы на площадки", "ads_click", "admin:web_clickout_changelist"),
+                ],
+            },
+            {
+                "title": "Справочники",
+                "items": [
+                    _nav("Направления", "route", "admin:catalog_route_changelist"),
+                    _nav("Города", "location_city", "admin:catalog_city_changelist"),
+                    _nav("Вокзалы", "home_work", "admin:catalog_station_changelist"),
+                    _nav("Площадки", "storefront", "admin:catalog_source_changelist"),
+                ],
+            },
+            {
+                "title": "Доступ",
+                "items": [
+                    _nav("Пользователи", "person", "admin:auth_user_changelist"),
+                    _nav("Группы", "group", "admin:auth_group_changelist"),
+                ],
+            },
+        ],
+    },
 }
