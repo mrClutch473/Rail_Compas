@@ -53,11 +53,16 @@ known-first-party = ["apps", "config", "scraper"]
 DJANGO_SETTINGS_MODULE = "config.settings.test"
 python_files = ["test_*.py"]
 testpaths = ["tests"]
-addopts = "-ra --strict-markers"
+addopts = "-ra --strict-markers -m 'not e2e'"
+markers = ["e2e: browser tests against a live server, run with -m e2e"]
 filterwarnings = [
     "ignore:The FORMS_URLFIELD_ASSUME_HTTPS transitional setting is deprecated",
 ]
 
 [tool.coverage.run]
 source = ["apps", "scraper"]
-omit = ["*/migrations/*", "scraper/recon/*"]
+omit = ["*/migrations/*", "scraper/recon/*", "*/__main__.py"]
+
+[tool.coverage.report]
+fail_under = 85
+skip_covered = true

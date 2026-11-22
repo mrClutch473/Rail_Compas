@@ -20,7 +20,7 @@ from urllib.parse import urlsplit
 from dotenv import load_dotenv
 from playwright.async_api import Request, Response, WebSocket, async_playwright
 
-from scraper.proxy import mask, parse_proxy, proxies_from_env
+from scraper.recon.proxy import mask, parse_proxy, proxies_from_env
 
 ROOT = Path(__file__).resolve().parents[2]
 
