@@ -31,7 +31,7 @@ COPY . .
 COPY --from=css /src/static/dist static/dist
 RUN DJANGO_SECRET_KEY=build DATABASE_URL=sqlite:///:memory: \
     python manage.py collectstatic --noinput --settings=config.settings.prod \
-    && chown -R app:app /app
+    && mkdir -p /data && chown -R app:app /app /data
 
 USER app
 EXPOSE 8000
