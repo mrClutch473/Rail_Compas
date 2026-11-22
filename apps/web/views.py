@@ -13,6 +13,7 @@ from django.views.decorators.http import require_POST
 
 from apps.analytics.services import cached_report
 from apps.catalog.models import City, Route, Source
+from apps.core.cache import cached
 from apps.core.enums import ACTIVE_JOB_STATUSES, CarClass, SyncTrigger
 from apps.offers.models import PriceSnapshot, Trip
 from apps.offers.selectors import current_snapshots, source_states
@@ -46,7 +47,7 @@ def home(request):
         "web/home.html",
         {
             "cities": list(City.objects.filter(is_active=True).values("slug", "name")),
-            "popular": popular_routes(),
+            "popular": cached("popular", build=popular_routes, ttl=300),
             "default_date": tomorrow,
             "max_date": timezone.localdate() + timedelta(days=SALE_DAYS),
             "sellers": Source.objects.filter(is_active=True, is_reference=False),
@@ -111,7 +112,13 @@ def results(request, origin: str, destination: str, day: str):
         job = request_sync(route, travel_date, SyncTrigger.USER).job
 
     sellers = [s.source for s in states]
-    all_trains = build_trains(route, travel_date, sellers)
+    all_trains = cached(
+        "trains",
+        route.pk,
+        travel_date,
+        *[s.pk for s in sellers],
+        build=lambda: build_trains(route, travel_date, sellers),
+    )
     filters = Filters.from_query(request.GET)
     present = {row.car_class for train in all_trains for row in train.classes}
     context.update(
@@ -127,7 +134,7 @@ def results(request, origin: str, destination: str, day: str):
         sort_options=SORTS.items(),
         hour_options=[12, 18, 24, 36],
         query=request.GET.urlencode(),
-        days=date_strip(route, travel_date),
+        days=cached("strip", route.pk, travel_date, build=lambda: date_strip(route, travel_date)),
         synced_at=freshest(states),
     )
     return render(request, "web/results.html", context)
@@ -256,9 +263,17 @@ def trip_detail(request, trip_id: int):
     route = trip.route
     states = source_states(route, trip.departure_date)
     sellers = [s.source for s in states]
-    trains = build_trains(route, trip.departure_date, sellers)
+    trains = cached(
+        "trains",
+        route.pk,
+        trip.departure_date,
+        *[s.pk for s in sellers],
+        build=lambda: build_trains(route, trip.departure_date, sellers),
+    )
     train = next((t for t in trains if t.trip.pk == trip.pk), None)
-    history = trip_history(trip, sellers)
+    history = cached(
+        "history", trip.pk, *[s.pk for s in sellers], build=lambda: trip_history(trip, sellers)
+    )
     chart = {h.car_class: {"label": h.label, "series": h.series} for h in history}
     selected = request.GET.get("class") or (history[0].car_class if history else "")
     return render(
@@ -286,7 +301,7 @@ def route_calendar(request, origin: str, destination: str):
         origin__slug=origin,
         destination__slug=destination,
     )
-    months, cheapest = price_calendar(route)
+    months, cheapest = cached("calendar", route.pk, build=lambda: price_calendar(route))
     return render(
         request,
         "web/calendar.html",

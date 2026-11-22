@@ -9,6 +9,7 @@ git pull --ff-only
 $COMPOSE build
 $COMPOSE up -d db
 $COMPOSE run --rm web python manage.py migrate --noinput
+$COMPOSE run --rm web python manage.py createcachetable
 $COMPOSE run --rm web python manage.py seed_reference
 $COMPOSE up -d
 $COMPOSE ps

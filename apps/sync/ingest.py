@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 from django.db import transaction
 
 from apps.catalog.models import City, Route, Source, Station
+from apps.core.cache import bump_data_version
 from apps.core.enums import SUCCESS_TASK_STATUSES
 from apps.offers.models import PriceSnapshot, Trip
 from scraper.normalize import normalize_station, twin_numbers
@@ -182,4 +183,6 @@ def ingest_result(task: SyncTask, result: ScrapeResult) -> SyncTask:
     task.started_at = result.started_at
     task.finished_at = result.finished_at
     task.save()
+    if snapshots:
+        transaction.on_commit(bump_data_version)
     return task

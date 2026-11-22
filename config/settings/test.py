@@ -13,3 +13,4 @@ STORAGES["staticfiles"] = {  # noqa: F405
     "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
 }
 SCHEDULER_ENABLED = False
+CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}

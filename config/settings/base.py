@@ -92,6 +92,14 @@ STORAGES = {
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
 }
 
+# Shared by all gunicorn workers and the worker: rate limits and page data (apps/core/cache.py)
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "django_cache",
+    }
+}
+
 SYNC_COOLDOWN_SECONDS = env.int("SYNC_COOLDOWN_SECONDS", default=300)
 SYNC_JOB_TIMEOUT_SECONDS = env.int("SYNC_JOB_TIMEOUT_SECONDS", default=180)
 SYNC_STALE_MINUTES = env.int("SYNC_STALE_MINUTES", default=10)
