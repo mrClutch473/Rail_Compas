@@ -1,0 +1,59 @@
+{% load ui %}
+<div id="sync-panel" class="card mt-4 overflow-hidden"
+     {% if job %}hx-get="{% url 'web:sync_status' job.pk %}" hx-trigger="every 1s" hx-swap="outerHTML"{% endif %}>
+  {% if job %}<div class="progress-rail h-1 w-full opacity-80"></div>{% endif %}
+  <div class="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+    <div class="min-w-0">
+      {% if job %}
+        <div class="flex items-center gap-2 font-semibold">
+          <span class="animate-spin text-brand">{% icon "refresh" 18 %}</span>
+          Запрашиваем цены у площадок…
+        </div>
+      {% else %}
+        <div class="flex items-center gap-2 font-semibold">
+          <span class="text-best">{% icon "clock" 18 %}</span>
+          {% if synced_at %}Цены обновлены {{ synced_at|ago }}{% else %}Цены ещё не запрашивались{% endif %}
+        </div>
+      {% endif %}
+
+      <ul class="mt-2.5 flex flex-wrap gap-x-4 gap-y-1.5 text-sm">
+        {% for state in states %}
+          {% with task=tasks|get:state.source.pk %}
+          <li class="flex items-center gap-1.5 text-muted">
+            <span class="h-2 w-2 rounded-full" style="background: {{ state.source.color }}"></span>
+            <span class="font-semibold text-text">{{ state.source.name }}</span>
+            {% if job and task %}
+              {% if task.status == "pending" or task.status == "running" %}
+                <span>запрашиваем…</span>
+              {% elif task.status == "ok" %}
+                <span class="flex items-center gap-1 text-best">{% icon "check" 14 %} {{ task.offers_count|plural:"предложение,предложения,предложений" }}</span>
+              {% elif task.status == "empty" %}
+                <span>поездов нет</span>
+              {% else %}
+                <span class="text-danger">временно недоступна</span>
+              {% endif %}
+            {% elif state.last_status and state.last_status != "ok" and state.last_status != "empty" and not state.synced_at %}
+              <span class="text-danger">временно недоступна</span>
+            {% elif state.is_stale and state.synced_at %}
+              <span class="text-warn">{{ state.synced_at|ago }}</span>
+            {% else %}
+              <span>{{ state.synced_at|ago }}</span>
+            {% endif %}
+          </li>
+          {% endwith %}
+        {% endfor %}
+      </ul>
+      {% if notice %}
+        <p class="mt-2.5 text-sm font-medium text-warn">{{ notice }}</p>
+      {% endif %}
+    </div>
+
+    {% if not job %}
+      <button type="button" class="btn-primary shrink-0"
+              hx-post="{% url 'web:sync' origin.slug destination.slug travel_date|date:'Y-m-d' %}"
+              hx-target="#sync-panel" hx-swap="outerHTML" hx-disabled-elt="this">
+        {% icon "refresh" 18 %} Обновить цены
+      </button>
+    {% endif %}
+  </div>
+</div>

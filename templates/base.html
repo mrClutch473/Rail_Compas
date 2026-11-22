@@ -1,35 +1,78 @@
-{% load static %}<!doctype html>
+{% load static ui %}<!doctype html>
 <html lang="ru">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}ЖД Компас — сравнение цен на ж/д билеты{% endblock %}</title>
-  <meta name="description" content="{% block description %}Цены на один и тот же поезд на разных площадках продажи билетов — рядом и с историей.{% endblock %}">
+  <meta name="description" content="{% block description %}Цены одного и того же поезда на разных площадках продажи билетов — рядом, со сравнением с тарифом РЖД.{% endblock %}">
+  <meta name="theme-color" content="#0b1a3c">
   <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+  <link rel="preload" href="{% static 'fonts/manrope-cyrillic-wght-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{% static 'fonts/unbounded-cyrillic-wght-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{% static 'dist/app.css' %}">
+  <script>
+    let t = null; try { t = localStorage.getItem("theme"); } catch (e) {}
+    document.documentElement.dataset.theme = t || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
   <script src="{% static 'vendor/htmx.min.js' %}" defer></script>
+  <script src="{% static 'js/app.js' %}" defer></script>
   {% block head %}{% endblock %}
 </head>
 <body class="min-h-screen flex flex-col" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-  <header class="border-b border-border bg-surface">
-    <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-      <a href="{% url 'web:home' %}" class="flex items-center gap-2 font-bold text-lg">
-        <img src="{% static 'img/favicon.svg' %}" alt="" class="h-7 w-7">
-        <span>ЖД&nbsp;Компас</span>
+  <header class="{% block header_class %}sticky top-0 z-30 border-b border-border bg-surface/85 backdrop-blur{% endblock %}">
+    <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
+      <a href="{% url 'web:home' %}" class="group flex items-center gap-2.5">
+        <img src="{% static 'img/favicon.svg' %}" alt="" class="h-8 w-8 transition group-hover:rotate-12">
+        <span class="font-display text-[17px] font-semibold tracking-tight whitespace-nowrap">ЖД&nbsp;Компас</span>
       </a>
       <nav class="flex items-center gap-1 text-sm">
-        <a href="{% url 'web:home' %}" class="btn-ghost">Поиск</a>
+        <a href="{% url 'web:home' %}#search" class="btn-ghost hidden sm:inline-flex">Поиск</a>
+        <a href="{% url 'web:about' %}" class="btn-ghost hidden sm:inline-flex">Как это работает</a>
+        <a href="{% url 'web:about' %}" class="btn-ghost px-2.5 sm:hidden" aria-label="Как это работает">{% icon "info" 18 %}</a>
+        <button type="button" class="btn-ghost px-2.5" data-theme-toggle aria-label="Сменить тему">
+          <span class="dark:hidden">{% icon "moon" 18 %}</span>
+          <span class="hidden dark:inline">{% icon "sun" 18 %}</span>
+        </button>
       </nav>
     </div>
   </header>
+
+  {% if messages %}
+    <div class="mx-auto mt-4 w-full max-w-6xl px-4">
+      {% for message in messages %}
+        <div class="fade-in flex items-center gap-2 rounded-2xl bg-warn-soft px-4 py-3 text-sm font-medium text-warn">
+          {% icon "alert" 18 %} {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
 
   <main class="flex-1">
     {% block content %}{% endblock %}
   </main>
 
-  <footer class="border-t border-border bg-surface">
-    <div class="mx-auto max-w-6xl px-4 py-6 text-sm text-muted">
-      ЖД Компас сравнивает цены площадок и не продаёт билеты. Покупка — на сайте площадки.
+  <footer class="mt-16 border-t border-border bg-surface">
+    <div class="mx-auto grid max-w-6xl gap-6 px-4 py-10 text-sm text-muted sm:grid-cols-[1.5fr_1fr_1fr]">
+      <div>
+        <div class="flex items-center gap-2 text-text">
+          <img src="{% static 'img/favicon.svg' %}" alt="" class="h-6 w-6">
+          <span class="font-display font-semibold">ЖД&nbsp;Компас</span>
+        </div>
+        <p class="mt-3 max-w-sm leading-relaxed">
+          Сравниваем цены площадок на один и тот же поезд. Билеты не продаём — покупка на сайте площадки.
+        </p>
+      </div>
+      <div>
+        <div class="font-semibold text-text">Сервис</div>
+        <ul class="mt-3 space-y-2">
+          <li><a class="hover:text-brand" href="{% url 'web:home' %}#search">Поиск билетов</a></li>
+          <li><a class="hover:text-brand" href="{% url 'web:about' %}">Как считаем цены</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="font-semibold text-text">О проекте</div>
+        <p class="mt-3 leading-relaxed">Выпускная работа, ВолгГТУ, 2026–2027</p>
+      </div>
     </div>
   </footer>
   {% block scripts %}{% endblock %}
