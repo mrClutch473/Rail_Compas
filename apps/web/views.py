@@ -30,10 +30,10 @@ from .presenters import (
     build_trains,
     date_strip,
     freshest,
-    popular_routes,
     price_calendar,
     trip_history,
 )
+from .warm import popular
 
 SYNC_CLICKS_PER_WINDOW = 10
 SYNC_WINDOW_SECONDS = 600
@@ -52,7 +52,7 @@ def home(request):
         "web/home.html",
         {
             "cities": list(City.objects.filter(is_active=True).values("slug", "name")),
-            "popular": cached("popular", build=popular_routes, ttl=300),
+            "popular": popular(),
             "default_date": tomorrow,
             "max_date": timezone.localdate() + timedelta(days=SALE_DAYS),
             "sellers": Source.objects.filter(is_active=True, is_reference=False),

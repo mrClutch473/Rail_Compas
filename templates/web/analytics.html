@@ -71,7 +71,7 @@
         <ul class="mt-5 space-y-4">
           {% for s in report.sellers %}
             {% if s.avg_markup is not None %}
-              <li title="{{ s.source.name }}: средняя наценка {{ s.avg_markup|floatformat:1 }}% по {{ s.markups|length }} ценам">
+              <li title="{{ s.source.name }}: средняя наценка {{ s.avg_markup|floatformat:1 }}% по {{ s.markup_count }} ценам">
                 <div class="flex items-baseline justify-between text-sm">
                   <span class="flex items-center gap-2 font-semibold"><span class="h-2.5 w-2.5 rounded-full" style="background: {{ s.source|series }}"></span>{{ s.source.name }}</span>
                   <span class="tabular font-bold">+{{ s.avg_markup|floatformat:1 }}%</span>

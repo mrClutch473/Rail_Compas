@@ -4,25 +4,32 @@ A comparison is one train, one car class, one sync job: all sellers were asked a
 time, so their prices are directly comparable."""
 
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import timedelta
 from decimal import Decimal
 
-from django.core.cache import cache
 from django.utils import timezone
 
 from apps.catalog.models import Source
+from apps.core.cache import cached, refresh
 from apps.core.enums import CarClass
 from apps.offers.models import PriceSnapshot
 
 
+def _avg(total, count):
+    return total / count if count else None
+
+
 @dataclass
 class SellerStats:
+    """Sums and counts only: the report sits in the cache and should stay small."""
+
     source: Source
     offers: int = 0
     cheapest: int = 0
-    markups: list[float] = field(default_factory=list)
-    over_best: list[float] = field(default_factory=list)
+    markup_sum: float = 0.0
+    markup_count: int = 0
+    over_best_sum: float = 0.0
 
     @property
     def cheapest_share(self) -> float:
@@ -30,31 +37,28 @@ class SellerStats:
 
     @property
     def avg_markup(self) -> float | None:
-        return sum(self.markups) / len(self.markups) if self.markups else None
+        return _avg(self.markup_sum, self.markup_count)
 
     @property
     def avg_over_best(self) -> float | None:
-        return sum(self.over_best) / len(self.over_best) if self.over_best else None
+        return _avg(self.over_best_sum, self.offers)
 
 
 @dataclass
 class ClassStats:
     car_class: str
     label: str
-    spreads: list[Decimal] = field(default_factory=list)
-    spread_pcts: list[float] = field(default_factory=list)
-
-    @property
-    def comparisons(self) -> int:
-        return len(self.spreads)
+    comparisons: int = 0
+    spread_sum: Decimal = Decimal(0)
+    spread_pct_sum: float = 0.0
 
     @property
     def avg_spread(self) -> Decimal | None:
-        return sum(self.spreads) / len(self.spreads) if self.spreads else None
+        return _avg(self.spread_sum, self.comparisons)
 
     @property
     def avg_spread_pct(self) -> float | None:
-        return sum(self.spread_pcts) / len(self.spread_pcts) if self.spread_pcts else None
+        return _avg(self.spread_pct_sum, self.comparisons)
 
 
 @dataclass
@@ -110,7 +114,8 @@ def build_report(days: int) -> Report:
         prices, reference = group["prices"], group["reference"]
         for source_id, price in prices.items():
             if reference and source_id in sellers:
-                sellers[source_id].markups.append(float((price - reference) / reference * 100))
+                sellers[source_id].markup_sum += float((price - reference) / reference * 100)
+                sellers[source_id].markup_count += 1
         if len(prices) < 2:
             continue
         comparisons += 1
@@ -122,10 +127,12 @@ def build_report(days: int) -> Report:
                 continue
             stats.offers += 1
             stats.cheapest += price == best
-            stats.over_best.append(float((price - best) / best * 100))
+            stats.over_best_sum += float((price - best) / best * 100)
         spread = worst - best
-        classes[key[2]].spreads.append(spread)
-        classes[key[2]].spread_pcts.append(float(spread / best * 100))
+        stats = classes[key[2]]
+        stats.comparisons += 1
+        stats.spread_sum += spread
+        stats.spread_pct_sum += float(spread / best * 100)
         if max_spread is None or spread > max_spread:
             max_spread, max_label = spread, labels[key]
 
@@ -134,17 +141,22 @@ def build_report(days: int) -> Report:
         comparisons=comparisons,
         trips=len(trips),
         snapshots=total,
-        sellers=[s for s in sellers.values() if s.offers or s.markups],
+        sellers=[s for s in sellers.values() if s.offers or s.markup_count],
         classes=[c for c in classes.values() if c.comparisons],
         max_spread=max_spread,
         max_spread_label=max_label,
     )
 
 
+REPORT_PERIODS = (1, 7, 30)
+REPORT_TTL = 3600
+
+
 def cached_report(days: int) -> Report:
-    key = f"analytics-report:{days}"
-    report = cache.get(key)
-    if report is None:
-        report = build_report(days)
-        cache.set(key, report, 600)
-    return report
+    return cached("analytics-report", days, build=lambda: build_report(days), ttl=REPORT_TTL)
+
+
+def refresh_reports() -> None:
+    """Run by the worker every few minutes so that no visitor waits for a rebuild."""
+    for days in REPORT_PERIODS:
+        refresh("analytics-report", days, build=lambda d=days: build_report(d), ttl=REPORT_TTL)

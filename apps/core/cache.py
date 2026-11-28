@@ -6,10 +6,18 @@ from collections.abc import Callable
 from django.core.cache import cache
 
 
+def _key(name: str, parts) -> str:
+    return ":".join(str(p) for p in (name, *parts))
+
+
 def cached[T](name: str, *parts, build: Callable[[], T], ttl: int = 600) -> T:
-    key = ":".join(str(p) for p in (name, *parts))
-    value = cache.get(key)
+    value = cache.get(_key(name, parts))
     if value is None:
-        value = build()
-        cache.set(key, value, ttl)
+        value = refresh(name, *parts, build=build, ttl=ttl)
+    return value
+
+
+def refresh[T](name: str, *parts, build: Callable[[], T], ttl: int = 600) -> T:
+    value = build()
+    cache.set(_key(name, parts), value, ttl)
     return value

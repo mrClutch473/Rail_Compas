@@ -1,3 +1,4 @@
+import pickle
 from datetime import datetime, timedelta
 from decimal import Decimal
 from zoneinfo import ZoneInfo
@@ -12,6 +13,7 @@ from apps.core.enums import SyncJobStatus, SyncTaskStatus, SyncTrigger
 from apps.sync.models import SyncJob
 from apps.web.models import ClickOut
 from apps.web.templatetags.ui import ago, duration, plural, rub
+from apps.web.warm import warm_caches
 
 from .factories import PriceSnapshotFactory, SyncJobFactory, SyncTaskFactory, TripFactory
 
@@ -240,3 +242,12 @@ def test_new_sync_shows_through_the_cache(client, world):
     task = SyncTaskFactory(job=job, source=world["tutu"], finished_at=timezone.now())
     PriceSnapshotFactory(trip=snaps["tutu"].trip, task=task, source=world["tutu"], price=4000)
     assert "разница 664 ₽" in client.get(results_url(world)).content.decode()
+
+
+def test_warm_caches_fill_home_and_analytics(world):
+    synced(world, {"tutu": "4371", "ott": "4664"}, reference="3886")
+    warm_caches()
+    assert cache.get("popular")[0].price == Decimal("4371")
+    report = cache.get("analytics-report:7")
+    assert report.comparisons == 1
+    assert len(pickle.dumps(report)) < 5000

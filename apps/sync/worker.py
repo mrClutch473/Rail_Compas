@@ -15,6 +15,7 @@ from django.utils import timezone
 
 from apps.catalog.models import Source, SourceCity
 from apps.core.enums import SyncTaskStatus, SyncTrigger
+from apps.web.warm import warm_caches
 from scraper.adapters import SourceAdapter, get_adapter
 from scraper.config import ScraperConfig
 from scraper.enums import ResultStatus
@@ -27,6 +28,8 @@ from .ingest import ingest_result
 from .models import SyncJob, SyncTask
 from .scheduler import schedule_tick
 from .services import claim_next_job, finish_job, recover_stale_jobs
+
+WARM_EVERY_SECONDS = 300
 
 log = logging.getLogger("worker")
 
@@ -88,6 +91,7 @@ class Worker:
         self.schedule = settings.SCHEDULER_ENABLED if schedule is None else schedule
         self._next_tick = 0.0
         self._next_cleanup = 0.0
+        self._next_warm = 0.0
         self.slots = slots or settings.WORKER_SLOTS
         self.idle_sleep = idle_sleep
         self.throttle = runner.throttle if runner else Throttle(config.state_file)
@@ -142,6 +146,10 @@ class Worker:
             created = await sync_to_async(schedule_tick)()
             if created:
                 log.info("schedule: queued %d jobs", len(created))
+        if self.schedule and now >= self._next_warm:
+            self._next_warm = now + WARM_EVERY_SECONDS
+            # own thread and DB connection: building reports must not hold up scraping
+            await asyncio.to_thread(warm_caches)
         if now >= self._next_cleanup:
             self._next_cleanup = now + 24 * 3600
             removed = await asyncio.to_thread(
