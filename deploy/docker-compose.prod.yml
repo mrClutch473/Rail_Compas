@@ -38,7 +38,7 @@ services:
 
   web:
     <<: *app
-    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --threads 2 --access-logfile -
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --threads 2 --access-logfile - --access-logformat '%(h)s "%(r)s" %(s)s %(b)s %(M)sms'
     ports:
       # only on the server itself until nginx + HTTPS arrive (roadmap phase 14)
       - "127.0.0.1:8000:8000"

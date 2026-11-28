@@ -8,6 +8,7 @@ import math
 import random
 import statistics
 import time
+from collections import defaultdict
 
 import httpx
 from django.core.management.base import BaseCommand
@@ -43,6 +44,15 @@ def collect_urls(limit: int = 40) -> list[str]:
     return urls
 
 
+def page_kind(url: str) -> str:
+    parts = [p for p in url.split("/") if p]
+    if not parts:
+        return "home"
+    if parts[0] == "r":
+        return "results" if len(parts) == 4 else "calendar"
+    return parts[0]
+
+
 def percentile(values: list[float], p: float) -> float:
     ordered = sorted(values)
     return ordered[max(0, math.ceil(p / 100 * len(ordered)) - 1)]
@@ -72,26 +82,32 @@ class Command(BaseCommand):
         out = self.stdout.write
         out(f"users {options['users']}, {options['seconds']} s, {len(urls)} pages")
         out(f"requests {total}, {total / options['seconds']:.1f}/s, errors {errors}")
-        if timings:
-            ms = [t * 1000 for t in timings]
+        if not timings:
+            return
+        groups = defaultdict(list)
+        for url, seconds in timings:
+            groups["all"].append(seconds * 1000)
+            groups[page_kind(url)].append(seconds * 1000)
+        for kind, ms in sorted(groups.items(), key=lambda item: -len(item[1])):
             out(
-                f"median {statistics.median(ms):.0f} ms, p95 {percentile(ms, 95):.0f} ms, "
-                f"p99 {percentile(ms, 99):.0f} ms, max {max(ms):.0f} ms"
+                f"  {kind:<10} {len(ms):>5}  median {statistics.median(ms):>5.0f} ms  "
+                f"p95 {percentile(ms, 95):>5.0f} ms  max {max(ms):>5.0f} ms"
             )
 
     async def run_users(self, urls, options):
-        timings: list[float] = []
+        timings: list[tuple[str, float]] = []
         errors = 0
         deadline = time.monotonic() + options["seconds"]
 
         async def user(client):
             nonlocal errors
             while time.monotonic() < deadline:
+                url = random.choice(urls)
                 started = time.monotonic()
                 try:
-                    response = await client.get(random.choice(urls))
+                    response = await client.get(url)
                     if response.status_code == 200:
-                        timings.append(time.monotonic() - started)
+                        timings.append((url, time.monotonic() - started))
                     else:
                         errors += 1
                 except httpx.HTTPError:

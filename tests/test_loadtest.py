@@ -1,6 +1,6 @@
 import pytest
 
-from apps.core.management.commands.loadtest import collect_urls, percentile
+from apps.core.management.commands.loadtest import collect_urls, page_kind, percentile
 
 from .factories import SyncJobFactory
 from .test_web_v2 import add_train
@@ -22,3 +22,10 @@ def test_only_pages_with_data(world):
     assert f"/r/volgograd/samara/{world['day'].isoformat()}/" in urls
     assert f"/trip/{trip.pk}/" in urls
     assert sum("/r/volgograd/samara/20" in u for u in urls) == 1
+
+
+def test_page_kind():
+    assert page_kind("/") == "home"
+    assert page_kind("/r/volgograd/samara/") == "calendar"
+    assert page_kind("/r/volgograd/samara/2026-12-01/") == "results"
+    assert page_kind("/trip/5/") == "trip"
