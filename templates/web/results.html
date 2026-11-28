@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load ui %}
+{% load cache ui %}
 
 {% block title %}{{ origin.name }} → {{ destination.name }}, {{ travel_date|date:"j E" }} — ЖД Компас{% endblock %}
 {% block description %}Цены на поезда {{ origin.name }} — {{ destination.name }} на {{ travel_date|date:"j E" }} на разных площадках и тариф РЖД.{% endblock %}
@@ -102,9 +102,11 @@
         </div>
       {% endif %}
       {% if trains %}
-        {% for train in trains %}
-          {% include "web/_train_card.html" %}
-        {% endfor %}
+        {% cache 600 train_cards route.pk travel_date cache_marks query %}
+          {% for train in trains %}
+            {% include "web/_train_card.html" %}
+          {% endfor %}
+        {% endcache %}
       {% elif job %}
         {% for _ in "123" %}
           <div class="card animate-pulse p-6">

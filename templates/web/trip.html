@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static ui %}
+{% load cache static ui %}
 
 {% block title %}Поезд {{ trip.train_number }}, {{ origin.name }} → {{ destination.name }}, {{ travel_date|date:"j E" }} — ЖД Компас{% endblock %}
 {% block description %}История цены поезда {{ trip.train_number }} {{ origin.name }} — {{ destination.name }} на {{ travel_date|date:"j E" }} на разных площадках.{% endblock %}
@@ -15,6 +15,7 @@
   <h1 class="mt-3 text-2xl font-semibold sm:text-4xl">Поезд {{ trip.train_number }}{% for n in trip.alt_numbers %} / {{ n }}{% endfor %}</h1>
   <p class="mt-2 text-muted">{{ travel_date|date:"l, j E" }}{% if trip.train_name %} · «{{ trip.train_name }}»{% endif %}</p>
 
+  {% cache 600 trip_body trip.pk cache_marks selected %}
   {% if train %}
     <div class="mt-6">{% include "web/_train_card.html" with hide_history_link=True %}</div>
   {% endif %}
@@ -97,6 +98,7 @@
   </section>
 </div>
 {{ chart|json_script:"chart-data" }}
+{% endcache %}
 {% endblock %}
 
 {% block scripts %}

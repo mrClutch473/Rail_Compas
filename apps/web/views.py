@@ -143,6 +143,7 @@ def results(request, origin: str, destination: str, day: str):
             "strip", route.pk, travel_date, build=lambda: date_strip(route, travel_date), ttl=300
         ),
         synced_at=freshest(states),
+        cache_marks="|".join(synced_marks(states)),
     )
     return render(request, "web/results.html", context)
 
@@ -298,6 +299,7 @@ def trip_detail(request, trip_id: int):
             "chart": chart,
             "selected": selected,
             "synced_at": freshest(states),
+            "cache_marks": "|".join(synced_marks(states)),
         },
     )
 
