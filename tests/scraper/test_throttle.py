@@ -78,3 +78,29 @@ def test_state_survives_restart(tmp_path):
     first.start_cooldown("s", minutes=30)
     second = make(clock, state_file=state, min_interval=0, daily_budget=10)
     assert second.cooldown_until("s") is not None
+
+
+def test_blocks_in_a_row_double_the_pause_up_to_a_day(tmp_path):
+    clock = Clock()
+    state = tmp_path / "state.json"
+    throttle = make(clock, state_file=state)
+    pauses = [throttle.start_cooldown("s", minutes=60) for _ in range(7)]
+    assert [p.total_seconds() / 3600 for p in pauses] == [1, 2, 4, 8, 16, 24, 24]
+    assert make(clock, state_file=state).start_cooldown("s", 60) == timedelta(hours=24)
+    throttle.record_success("s")
+    assert throttle.start_cooldown("s", minutes=60) == timedelta(hours=1)
+
+
+def test_queued_request_stops_when_the_one_ahead_got_blocked():
+    clock = Clock()
+    throttle = make(clock)
+    asyncio.run(throttle.acquire("s"))
+
+    async def blocked_while_waiting(seconds):
+        await clock.sleep(seconds)
+        throttle.start_cooldown("s", minutes=60)
+
+    throttle.sleep = blocked_while_waiting
+    with pytest.raises(BlockedError):
+        asyncio.run(throttle.acquire("s"))
+    assert throttle.remaining("s") == 99

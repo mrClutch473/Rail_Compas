@@ -9,6 +9,8 @@ from pathlib import Path
 
 from .errors import BlockedError, BudgetExhausted
 
+MAX_COOLDOWN_MINUTES = 24 * 60
+
 
 @dataclass
 class SourceLimits:
@@ -22,6 +24,7 @@ class _SourceState:
     day: str = ""
     used: int = 0
     cooldown_until: str = ""
+    blocks: int = 0
     last_request: float = 0.0
     lock: asyncio.Lock = field(default_factory=asyncio.Lock, repr=False)
 
@@ -57,9 +60,20 @@ class Throttle:
         until = datetime.fromisoformat(raw)
         return until if until > self.now() else None
 
-    def start_cooldown(self, source: str, minutes: int) -> None:
-        self._get(source).cooldown_until = (self.now() + timedelta(minutes=minutes)).isoformat()
+    def start_cooldown(self, source: str, minutes: int) -> timedelta:
+        """Each block in a row doubles the pause, up to a day; a success resets it."""
+        state = self._get(source)
+        state.blocks += 1
+        pause = timedelta(minutes=min(minutes * 2 ** (state.blocks - 1), MAX_COOLDOWN_MINUTES))
+        state.cooldown_until = (self.now() + pause).isoformat()
         self._save()
+        return pause
+
+    def record_success(self, source: str) -> None:
+        state = self._get(source)
+        if state.blocks:
+            state.blocks = 0
+            self._save()
 
     def remaining(self, source: str) -> int:
         state = self._get(source)
@@ -88,6 +102,9 @@ class Throttle:
             wait = state.last_request + pause - self.clock()
             if state.last_request and wait > 0:
                 await self.sleep(wait)
+            # the request ahead of us in the queue may have been blocked while we waited
+            if until := self.cooldown_until(source):
+                raise BlockedError(f"{source} is cooling down until {until:%H:%M} UTC")
             state.last_request = self.clock()
             state.used += 1
             self._save()
@@ -109,6 +126,7 @@ class Throttle:
                 day=item.get("day", ""),
                 used=item.get("used", 0),
                 cooldown_until=item.get("cooldown_until", ""),
+                blocks=item.get("blocks", 0),
             )
 
     def _save(self) -> None:
@@ -116,7 +134,12 @@ class Throttle:
             return
         self.state_file.parent.mkdir(parents=True, exist_ok=True)
         data = {
-            source: {"day": s.day, "used": s.used, "cooldown_until": s.cooldown_until}
+            source: {
+                "day": s.day,
+                "used": s.used,
+                "cooldown_until": s.cooldown_until,
+                "blocks": s.blocks,
+            }
             for source, s in self._state.items()
         }
         tmp = self.state_file.with_suffix(".tmp")

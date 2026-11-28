@@ -63,6 +63,7 @@ class Runner:
             )
             status, warnings, error = self._judge(parsed, request)
             offers, references = parsed.offers, parsed.reference_offers
+            self.throttle.record_success(request.source)
         except TimeoutError:
             status, warnings, error, offers, references = (
                 ResultStatus.TIMEOUT,
