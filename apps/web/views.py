@@ -40,6 +40,11 @@ SYNC_WINDOW_SECONDS = 600
 QUEUE_LIMIT = 30
 
 
+def synced_marks(states) -> list[str]:
+    """Cache key part that changes whenever any seller of this route and date gets new prices."""
+    return [f"{s.source.pk}-{s.synced_at.timestamp() if s.synced_at else 0}" for s in states]
+
+
 def home(request):
     tomorrow = timezone.localdate() + timedelta(days=1)
     return render(
@@ -116,7 +121,7 @@ def results(request, origin: str, destination: str, day: str):
         "trains",
         route.pk,
         travel_date,
-        *[s.pk for s in sellers],
+        *synced_marks(states),
         build=lambda: build_trains(route, travel_date, sellers),
     )
     filters = Filters.from_query(request.GET)
@@ -134,7 +139,9 @@ def results(request, origin: str, destination: str, day: str):
         sort_options=SORTS.items(),
         hour_options=[12, 18, 24, 36],
         query=request.GET.urlencode(),
-        days=cached("strip", route.pk, travel_date, build=lambda: date_strip(route, travel_date)),
+        days=cached(
+            "strip", route.pk, travel_date, build=lambda: date_strip(route, travel_date), ttl=300
+        ),
         synced_at=freshest(states),
     )
     return render(request, "web/results.html", context)
@@ -267,12 +274,12 @@ def trip_detail(request, trip_id: int):
         "trains",
         route.pk,
         trip.departure_date,
-        *[s.pk for s in sellers],
+        *synced_marks(states),
         build=lambda: build_trains(route, trip.departure_date, sellers),
     )
     train = next((t for t in trains if t.trip.pk == trip.pk), None)
     history = cached(
-        "history", trip.pk, *[s.pk for s in sellers], build=lambda: trip_history(trip, sellers)
+        "history", trip.pk, *synced_marks(states), build=lambda: trip_history(trip, sellers)
     )
     chart = {h.car_class: {"label": h.label, "series": h.series} for h in history}
     selected = request.GET.get("class") or (history[0].car_class if history else "")
@@ -301,7 +308,7 @@ def route_calendar(request, origin: str, destination: str):
         origin__slug=origin,
         destination__slug=destination,
     )
-    months, cheapest = cached("calendar", route.pk, build=lambda: price_calendar(route))
+    months, cheapest = cached("calendar", route.pk, build=lambda: price_calendar(route), ttl=300)
     return render(
         request,
         "web/calendar.html",

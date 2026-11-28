@@ -8,11 +8,10 @@ from django.core.management import call_command
 from django.utils import timezone
 
 from apps.catalog.models import City, Route, Source, SourceCity, Station
-from apps.core.cache import bump_data_version, cached, data_version
+from apps.core.cache import cached
 from apps.core.enums import SyncJobStatus, SyncTaskStatus, SyncTrigger
 from apps.offers.models import PriceSnapshot, Trip
 from apps.offers.selectors import current_snapshots, price_history, source_states
-from apps.sync.ingest import ingest_result
 from apps.sync.models import SyncJob
 from apps.sync.services import (
     NoSourcesForRoute,
@@ -24,16 +23,13 @@ from apps.sync.worker import Worker
 from scraper import adapters
 from scraper.adapters import SourceAdapter
 from scraper.config import ScraperConfig
-from scraper.enums import CarClass, ResultStatus
+from scraper.enums import CarClass
 from scraper.errors import BlockedError
 from scraper.runner import Runner
 from scraper.schemas import (
-    CityRef,
     ParseResult,
     RawCapture,
     RawOffer,
-    ScrapeRequest,
-    ScrapeResult,
 )
 from scraper.throttle import Throttle
 
@@ -271,24 +267,7 @@ def test_sync_command_runs_in_process(catalog, capsys):
     assert PriceSnapshot.objects.count() == 1
 
 
-def test_new_prices_refresh_page_cache(catalog):
-    task = request_sync(catalog, DAY, SyncTrigger.USER).job.tasks.get(source__code="alpha")
-    city = CityRef(slug="x", name="X", timezone="Europe/Moscow", external_id="x")
-    now = datetime.now(MSK)
-    result = ScrapeResult(
-        source="alpha",
-        request=ScrapeRequest(source="alpha", origin=city, destination=city, travel_date=DAY),
-        status=ResultStatus.OK,
-        offers=[offer()],
-        started_at=now,
-        finished_at=now,
-    )
-    before = data_version()
-    ingest_result(task, result)
-    assert data_version() == before + 1
-
-
-def test_cached_value_lives_until_new_data():
+def test_cached_value_is_kept_per_key():
     calls = []
 
     def build():
@@ -298,5 +277,3 @@ def test_cached_value_lives_until_new_data():
     assert cached("x", 1, build=build) == 1
     assert cached("x", 1, build=build) == 1
     assert cached("x", 2, build=build) == 2
-    bump_data_version()
-    assert cached("x", 1, build=build) == 3

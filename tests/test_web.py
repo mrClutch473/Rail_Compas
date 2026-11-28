@@ -231,3 +231,12 @@ def test_small_percent_is_not_zero():
 
     assert percent(0.4) == "<1%"
     assert percent(6.3) == "6%"
+
+
+def test_new_sync_shows_through_the_cache(client, world):
+    snaps = synced(world, {"tutu": "4371", "ott": "4664"})
+    assert "разница 293 ₽" in client.get(results_url(world)).content.decode()
+    job = SyncJobFactory(route=world["route"], travel_date=world["day"], status=SyncJobStatus.DONE)
+    task = SyncTaskFactory(job=job, source=world["tutu"], finished_at=timezone.now())
+    PriceSnapshotFactory(trip=snaps["tutu"].trip, task=task, source=world["tutu"], price=4000)
+    assert "разница 664 ₽" in client.get(results_url(world)).content.decode()
